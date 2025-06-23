@@ -1,14 +1,14 @@
 from sqlalchemy import Column, Integer, String, Index
 from sqlalchemy.orm import validates
 # Local Imports
-from app.database import BaseSaveModel
+from app.database import BaseSaveAccountModel
 
 # Status
 ACCEPT = "OK"
 BANNED = "BANNED"
 
 
-class Account(BaseSaveModel):
+class Account(BaseSaveAccountModel):
     __tablename__ = 'account'
     
     __table_args__ = (

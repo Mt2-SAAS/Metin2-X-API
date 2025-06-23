@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # Local Imports
-from .database import account_engine as engine, BaseSaveModel
+from .database import account_engine as engine, BaseSaveAccountModel
 from .api.routes import account
 
 # Crear las tablas en la base de datos
-BaseSaveModel.metadata.create_all(bind=engine)
+BaseSaveAccountModel.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Mi API con FastAPI",

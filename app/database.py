@@ -1,9 +1,8 @@
-from typing import Generator
+from typing import Any, Generator
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session, Query
-from enum import Enum
 # Local Imports
 from .config import settings
 
@@ -41,29 +40,30 @@ def get_db(name: str = "account") -> Generator[Session]:
 def get_base_save_model():
     """Obtener la sesión de base de datos para modelos que necesitan guardar datos"""
     Base = declarative_base()
-    session = SessionLocalAccount()
+    session_account = SessionLocalAccount()
+    session_player = SessionLocalPlayer()
 
-    class BaseSaveModel(Base):
+    class BaseSaveAccountModel(Base):
         """Clase base para modelos que necesitan guardar datos en la base de datos"""
         
         __abstract__ = True
 
         def save(self):
             """Guardar el modelo en la base de datos"""
-            session.add(self)
-            session.commit()
-            session.refresh(self)
+            session_account.add(self)
+            session_account.commit()
+            session_account.refresh(self)
             return self
 
         def delete(self):
             """Eliminar el modelo de la base de datos"""
-            session.delete(self)
-            session.commit()
+            session_account.delete(self)
+            session_account.commit()
 
         @classmethod
         def filter(cls, *args, **kwargs):
             """Filtrar modelos por expresiones o atributos"""
-            return session.query(cls).filter(*args, **kwargs)
+            return session_account.query(cls).filter(*args, **kwargs)
         
         @property
         @classmethod
@@ -71,10 +71,40 @@ def get_base_save_model():
             """Realizar una consulta a la base de datos
             Y devuelve una instancia de query para el modelo
             """
-            return session.query(cls)
+            return session_account.query(cls)
+    
+    class BaseSavePlayerModel(Base):
+        """Clase base para modelos que necesitan guardar datos en la base de datos"""
+        
+        __abstract__ = True
 
-    return BaseSaveModel
+        def save(self):
+            """Guardar el modelo en la base de datos"""
+            session_player.add(self)
+            session_player.commit()
+            session_player.refresh(self)
+            return self
+
+        def delete(self):
+            """Eliminar el modelo de la base de datos"""
+            session_player.delete(self)
+            session_player.commit()
+
+        @classmethod
+        def filter(cls, *args, **kwargs):
+            """Filtrar modelos por expresiones o atributos"""
+            return session_player.query(cls).filter(*args, **kwargs)
+        
+        @property
+        @classmethod
+        def query(cls) -> Query:
+            """Realizar una consulta a la base de datos
+            Y devuelve una instancia de query para el modelo
+            """
+            return session_player.query(cls)
+
+    return BaseSaveAccountModel, BaseSavePlayerModel
 
 # Crear Base class and get session
-BaseSaveModel = get_base_save_model() # Model of the account Session
-Base = declarative_base()
+BaseSaveAccountModel,\
+BaseSavePlayerModel  = get_base_save_model() # Model of the account Session
