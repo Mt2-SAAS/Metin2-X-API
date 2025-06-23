@@ -1,0 +1,7 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+
+
+router = APIRouter(prefix="/player", tags=["player"])
+
+
+
