@@ -6,8 +6,6 @@ from app.database import BaseSavePlayerModel
 class Guild(BaseSavePlayerModel):
     __tablename__ = 'guild'  # o el nombre que prefieras para la tabla
 
-    __table_args__ = {'info': {'skip_autogenerate': True}}
-    
     # Campos del modelo
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(12))  # CharField(max_length=12)

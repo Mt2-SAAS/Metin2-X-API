@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # Local Imports
-#from .database import account_engine, player_engine, BaseSaveAccountModel, BaseSavePlayerModel
+from .database import BaseSaveModel, engine
 from .api.routes import account, player, guild
 
 # Crear las tablas en la base de datos
-#BaseSaveAccountModel.metadata.create_all(bind=account_engine)
-#BaseSavePlayerModel.metadata.create_all(bind=player_engine)
+BaseSaveModel.metadata.create_all(bind=engine)
+
 
 app = FastAPI(
     title="Mi API con FastAPI",

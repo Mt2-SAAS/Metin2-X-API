@@ -6,9 +6,8 @@ from app.database import BaseSavePlayerModel
 
 class Player(BaseSavePlayerModel):
     __tablename__ = 'player'
-    
-    __table_args__ = {'info': {'skip_autogenerate': True}}
 
+    # Campos del modelo
     account_id = Column(Integer, primary_key=True)  # Equivalente a PositiveIntegerField
     name = Column(String(24))  # Equivalente a CharField(max_length=24)
     job = Column(Integer)  # Equivalente a PositiveIntegerField
