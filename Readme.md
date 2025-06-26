@@ -1,11 +1,11 @@
 # My FastAPI Project
 
-A robust REST API built with FastAPI and SQLAlchemy that implements a user account, player, and guild management system with JWT authentication and multi-database architecture.
+A robust REST API built with FastAPI and SQLAlchemy that implements a user account, player, and guild management system with JWT authentication and sophisticated triple-database architecture.
 
 ## 🚀 Features
 
 - **JWT Authentication**: Secure token-based authentication system
-- **Multi-Database Architecture**: Separates account and player data into independent databases
+- **Triple-Database Architecture**: Separates main application, legacy account, and legacy player/guild data into independent databases
 - **RESTful API**: Well-structured endpoints following best practices
 - **Pagination**: Automatic pagination for listings to optimize performance
 - **Data Validation**: Pydantic schemas for robust input and output validation
@@ -80,6 +80,7 @@ app/
 4. **Configure environment variables** (optional)
    Create a `.env` file in the project root:
    ```env
+   DATABASE_URL_APP=mysql+pymysql://username:password@host:port/application
    DATABASE_URL_ACCOUNT=mysql+pymysql://username:password@host:port/srv1_account
    DATABASE_URL_PLAYER=mysql+pymysql://username:password@host:port/srv1_player
    SECRET_KEY=your-very-secure-secret-key
@@ -89,8 +90,7 @@ app/
 
 5. **Create databases**
    ```sql
-   CREATE DATABASE srv1_account;
-   CREATE DATABASE srv1_player;
+   CREATE DATABASE application;
    ```
 
 6. **Run the application**
@@ -174,7 +174,15 @@ GET /api/player/players?page=1&per_page=20
 **Response:**
 ```json
 {
-  "players": [...],
+  "players": [
+    {
+      "account_id": 12345,
+      "name": "DragonSlayer",
+      "job": 1,
+      "level": 85,
+      "exp": 450000
+    }
+  ],
   "total": 150,
   "page": 1,
   "per_page": 20,
@@ -191,11 +199,18 @@ GET /api/player/players?page=1&per_page=20
 GET /api/guild/guilds?page=1&per_page=20
 ```
 
-
 **Response:**
 ```json
 {
-  "guilds": [...],
+  "guilds": [
+    {
+      "id": 1,
+      "name": "DragonSlayers",
+      "master": 12345,
+      "level": 50,
+      "exp": 25000,
+    }
+  ],
   "total": 150,
   "page": 1,
   "per_page": 20,
@@ -211,8 +226,9 @@ GET /api/guild/guilds?page=1&per_page=20
 
 | Variable | Description | Default Value |
 |----------|-------------|---------------|
-| `DATABASE_URL_ACCOUNT` | Account database connection URL | `mysql+pymysql://root:Penagos0320@192.168.17.52:3306/srv1_account` |
-| `DATABASE_URL_PLAYER` | Player database connection URL | `mysql+pymysql://root:Penagos0320@192.168.17.52:3306/srv1_player` |
+| `DATABASE_URL_APP` | Main application database connection URL | `mysql+pymysql://username:password@HOSTNAME_IP:3306/application` |
+| `DATABASE_URL_ACCOUNT` | Legacy account database connection URL | `mysql+pymysql://username:password@HOSTNAME_IP:3306/account` |
+| `DATABASE_URL_PLAYER` | Legacy player database connection URL | `mysql+pymysql://username:password@HOSTNAME_IP:3306/player` |
 | `SECRET_KEY` | JWT secret key | `your-secret-key` |
 | `ALGORITHM` | JWT encryption algorithm | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiration time (minutes) | `30` |
@@ -237,28 +253,34 @@ Once the application is running, you can access:
 
 ## 🏗️ Architecture
 
-### Dual Database Setup
+### Triple Database Setup
 
-The application uses two separate MySQL databases:
+The application uses three separate MySQL databases:
 
-1. **srv1_account**: Stores authentication information and user accounts
-2. **srv1_player**: Handles player and guild data
+1. **application**: Main application database for new features and data
+2. **srv1_account**: Legacy database storing authentication information and user accounts
+3. **srv1_player**: Legacy database handling player and guild data
 
 ### Custom Models
 
-Models inherit from custom base classes (`BaseSaveAccountModel` and `BaseSavePlayerModel`) that include convenient methods:
+Models inherit from custom base classes that correspond to their target database:
 
-- `.save()`: Save to database
-- `.delete()`: Delete record
-- `.filter()`: Filter records
-- `.query()`: Perform queries
+- **BaseSaveModel**: For main application database tables
+- **BaseSaveAccountModel**: For legacy account database tables  
+- **BaseSavePlayerModel**: For legacy player/guild database tables
+
+Each base class includes convenient methods:
+- `.save()`: Save to appropriate database
+- `.delete()`: Delete record from appropriate database
+- `.filter()`: Filter records in appropriate database
+- `.query()`: Perform queries on appropriate database
 
 ### Dependency System
 
 Uses FastAPI's dependency injection system for:
-- Database session management
-- User authentication
-- CRUD operations
+- Multi-database session management (application, account, player databases)
+- User authentication and authorization
+- Database-specific CRUD operations
 
 ## 🚀 Development
 
