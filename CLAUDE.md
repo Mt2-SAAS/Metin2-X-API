@@ -16,28 +16,37 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Database Management
-- The application uses dual MySQL databases: `srv1_account` and `srv1_player`
+- The application uses a **triple MySQL database** architecture:
+  - `application` (main app database)
+  - `srv1_account` (legacy account database)
+  - `srv1_player` (legacy player/guild database)
 - Database connections are configured in `app/config.py` with environment variable support
 - Uses SQLAlchemy with custom base models for each database
 
 ## Architecture Overview
 
-### Multi-Database Setup
-The application implements a dual-database architecture:
-- **Account Database**: Handles user authentication, login credentials, and account management
-- **Player Database**: Manages game-related data like player stats, levels, and character information
+### Triple-Database Setup
+The application implements a sophisticated three-database architecture:
+- **Application Database** (`DATABASE_URL_APP`): Main application database with `BaseSaveModel`
+- **Account Database** (`DATABASE_URL_ACCOUNT`): Legacy account system with `BaseSaveAccountModel`  
+- **Player Database** (`DATABASE_URL_PLAYER`): Legacy player and guild data with `BaseSavePlayerModel`
 
 ### Core Components
 
 **Database Layer (`app/database.py`)**:
-- Two separate SQLAlchemy engines for account and player databases
-- Custom base models `BaseSaveAccountModel` and `BaseSavePlayerModel` with built-in CRUD methods
-- Dependency injection functions for database sessions
+- Three separate SQLAlchemy engines: `engine`, `account_engine`, `player_engine`
+- Three session makers: `SessionApp`, `SessionLocalAccount`, `SessionLocalPlayer`
+- Three custom base models with built-in CRUD methods:
+  - `BaseSaveModel` - for main app tables
+  - `BaseSaveAccountModel` - for account tables
+  - `BaseSavePlayerModel` - for player/guild tables
+- Dependency injection functions for each database session
 
-**Models**:
+**Models Architecture**:
 - `Account` model extends `BaseSaveAccountModel` with authentication fields and status validation
-- `Player` model extends `BaseSavePlayerModel` with game character data
-- Both models inherit `.save()`, `.delete()`, `.filter()`, and `.query()` methods
+- `Player` model extends `BaseSavePlayerModel` with game character data (account_id, name, job, level, exp)
+- `Guild` model extends `BaseSavePlayerModel` with guild management data (name, master, level, exp, skills, war stats)
+- All models inherit database-specific `.save()`, `.delete()`, `.filter()`, and `.query()` methods
 
 **Authentication System**:
 - JWT-based authentication using `python-jose`
@@ -49,25 +58,32 @@ The application implements a dual-database architecture:
 - Modular router system with separate route files for accounts, players, and guilds
 - Dependency injection for database sessions and authentication
 - Consistent error handling with HTTP status codes
+- Pagination support for list endpoints
 
 ### Key Patterns
 
-**CRUD Pattern**: Custom CRUD classes (like `CRUDAccount`) handle database operations with built-in authentication and validation.
+**Multi-Database CRUD Pattern**: Each model uses the appropriate database session based on its inheritance:
+- `BaseSaveModel` → `SessionApp` (main application database)
+- `BaseSaveAccountModel` → `SessionLocalAccount` (legacy account database)
+- `BaseSavePlayerModel` → `SessionLocalPlayer` (legacy player database)
 
 **Dependency Injection**: Uses FastAPI's dependency system extensively:
-- `crud_account_dependency`: Injects CRUD operations
+- `crud_account_dependency`: Injects CRUD operations for accounts
 - `current_account_dependency`: Injects authenticated user
-- Database session dependencies for each database
+- `database_account_dependency`: Account database session
+- `database_player_dependency`: Player database session
 
 **Configuration Management**: Uses `python-decouple` for environment-based configuration with sensible defaults.
 
 ## Database Connection Details
 
-The application connects to MySQL databases with the following pattern:
+The application connects to three MySQL databases:
+- Main App DB: `mysql+pymysql://user:pass@host:port/application`
 - Account DB: `mysql+pymysql://user:pass@host:port/srv1_account`
 - Player DB: `mysql+pymysql://user:pass@host:port/srv1_player`
 
 Configure via environment variables:
+- `DATABASE_URL_APP`
 - `DATABASE_URL_ACCOUNT`
 - `DATABASE_URL_PLAYER`
 - `SECRET_KEY`
@@ -83,4 +99,29 @@ Configure via environment variables:
 - `PUT /me` - Update account details
 - `PUT /me/password` - Change password
 
-**Player & Guild endpoints** are available under `/api/player/` and `/api/guild/` respectively.
+**Player Management** (`/api/player/`):
+- `GET /players` - List players with pagination (ordered by level desc)
+
+**Guild Management** (`/api/guild/`):
+- `GET /guilds` - List guilds with pagination (ordered by level desc)
+
+## Model Schema Overview
+
+**Account Model** (BaseSaveAccountModel):
+- `id`, `login`, `password`, `social_id`, `email`, `status`
+- Status validation with choices: "OK", "BANNED"
+
+**Player Model** (BaseSavePlayerModel):
+- `account_id` (PK), `name`, `job`, `level`, `exp`
+
+**Guild Model** (BaseSavePlayerModel):
+- `id` (PK), `name`, `sp`, `master`, `level`, `exp`
+- `skill_point`, `skill`, `win`, `draw`, `loss`
+- `ladder_point`, `gold`
+
+## Development Notes
+
+- The application creates all tables automatically on startup via `BaseSaveModel.metadata.create_all(bind=engine)`
+- Echo is enabled on all database engines for development (shows SQL queries)
+- CORS is configured for `localhost:3000` and `localhost:8080`
+- Pagination is implemented with `page`, `per_page`, `total_pages`, `has_next`, `has_prev` metadata
