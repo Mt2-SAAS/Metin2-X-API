@@ -14,7 +14,8 @@ class Account(BaseSaveAccountModel):
     __table_args__ = (
         Index('login', 'login', unique=True),
         Index('social_id', 'social_id'),
-        {'comment': 'Tabla de cuentas de usuarios'}
+        {'comment': 'Tabla de cuentas de usuarios',
+         'info': {'skip_autogenerate': True}},
     )
 
     # Definir las opciones de estado

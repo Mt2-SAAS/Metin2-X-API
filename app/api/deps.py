@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.crud.account import get_account, CRUDAccount
 from app.models.account import Account
-from app.database  import get_db
+from app.database  import get_acount_db, get_player_db
 
 account = get_account()
 security = HTTPBearer()
@@ -42,7 +42,7 @@ def get_current_active_account(current_account: Account = Depends(get_current_ac
     return current_account
 
 
-database_account_dependency = Annotated[Session, Depends(lambda: get_db('account'))]
-database_player_dependency = Annotated[Session, Depends(lambda: get_db('player'))]
+database_account_dependency = Annotated[Session, Depends(get_acount_db)]
+database_player_dependency = Annotated[Session, Depends(get_player_db)]
 crud_account_dependency = Annotated[CRUDAccount, Depends(get_account)]
 current_account_dependency = Annotated[Account, Depends(get_current_active_account)]

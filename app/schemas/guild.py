@@ -2,19 +2,18 @@ from pydantic import BaseModel
 from typing import List
 
 
-class PlayerResponse(BaseModel):
-    account_id: int
+class GuildResponse(BaseModel):
+    id: int
     name: str
-    job: int
-    level: int
     exp: int
+    level: int
     
     class Config:
         from_attributes = True
 
 
-class PaginatedPlayersResponse(BaseModel):
-    players: List[PlayerResponse]
+class PaginatedGuildsResponse(BaseModel):
+    guilds: List[GuildResponse]
     total: int
     page: int
     per_page: int

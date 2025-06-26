@@ -21,20 +21,22 @@ SessionLocalAccount = sessionmaker(autocommit=False, autoflush=False, bind=accou
 SessionLocalPlayer = sessionmaker(autocommit=False, autoflush=False, bind=player_engine)
 
 
-def get_db(name: str = "account") -> Generator[Session]:
-    """Dependency para obtener sesión de base de datos"""
+def get_acount_db() -> Generator[Session]:
+    """Dependency para obtener sesión de base de datos account"""
     db_account = SessionLocalAccount()
+    try:
+        yield db_account
+    finally:
+        db_account.close()
+
+
+def get_player_db() -> Generator[Session]:
+    """Dependency para obtener sesión de base de datos player"""
     db_player = SessionLocalPlayer()
     try:
-        if name == "account":
-            yield db_account
-        if name == "player":
-            yield db_player
+        yield db_player
     finally:
-        if name == "account":
-            db_account.close()
-        if name == "player":
-            db_player.close()
+        db_player.close()
 
 
 def get_base_save_model():
@@ -65,7 +67,6 @@ def get_base_save_model():
             """Filtrar modelos por expresiones o atributos"""
             return session_account.query(cls).filter(*args, **kwargs)
         
-        @property
         @classmethod
         def query(cls) -> Query:
             """Realizar una consulta a la base de datos
@@ -95,7 +96,6 @@ def get_base_save_model():
             """Filtrar modelos por expresiones o atributos"""
             return session_player.query(cls).filter(*args, **kwargs)
         
-        @property
         @classmethod
         def query(cls) -> Query:
             """Realizar una consulta a la base de datos

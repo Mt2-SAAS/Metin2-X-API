@@ -3,35 +3,35 @@ from math import ceil
 
 # Local Imports
 # from app.api.deps import database_player_dependency
-from app.models.player import Player
-from app.schemas.player import (
-    PaginatedPlayersResponse
+from app.models.guild import Guild
+from app.schemas.guild import (
+    PaginatedGuildsResponse,
 )
 
-router = APIRouter(prefix="/player", tags=["player"])
+router = APIRouter(prefix="/guild", tags=["guild"])
 
 
-@router.get("/players", response_model=PaginatedPlayersResponse)
-async def list_players(
+@router.get("/guilds", response_model=PaginatedGuildsResponse)
+async def list_guilds(
     # db: database_player_dependency,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
 ):
     try:
-        query = Player.query()
+        query = Guild.query()
 
         # Contar total de registros
         total = query.count()
 
         offset = (page - 1) * per_page
-        players = query.order_by(Player.level.desc()).offset(offset).limit(per_page).all()
+        guilds = query.order_by(Guild.level.desc()).offset(offset).limit(per_page).all()
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page)
         has_next = page < total_pages
         has_prev = page > 1
 
-        return PaginatedPlayersResponse(
-            players=players,
+        return PaginatedGuildsResponse(
+            guilds=guilds,
             total=total,
             page=page,
             per_page=per_page,
@@ -41,4 +41,4 @@ async def list_players(
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener jugadores: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener gremios: {str(e)}")
