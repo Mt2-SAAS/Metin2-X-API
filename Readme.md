@@ -1,5 +1,7 @@
 # My FastAPI Project
 
+🇺🇸 English | [🇪🇸 Español](README-ES.md)
+
 A robust REST API built with FastAPI and SQLAlchemy that implements a user account, player, and guild management system with JWT authentication and sophisticated triple-database architecture.
 
 ## 🚀 Features
