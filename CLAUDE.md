@@ -5,6 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Running the Application
+
+**Local Development:**
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -13,6 +15,21 @@ pip install -r requirements.txt
 python -m app.main
 # OR
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Docker Development:**
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Run in background
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs -f web
 ```
 
 ### Database Management
@@ -119,9 +136,34 @@ Configure via environment variables:
 - `skill_point`, `skill`, `win`, `draw`, `loss`
 - `ladder_point`, `gold`
 
+## Docker Configuration
+
+The application includes a complete Docker setup with health checks and proper service orchestration:
+
+**Docker Files:**
+- `Dockerfile`: Python 3.13 slim container with FastAPI application
+- `docker-compose.yml`: Multi-service setup with web app and MySQL database
+- `compose/api/entrypoint.sh`: Service startup script with database wait logic
+- `compose/api/init.sql`: Database initialization script for triple-database setup
+
+**Docker Features:**
+- **Health Checks**: MySQL service includes health check using `mysqladmin ping`
+- **Service Dependencies**: Web service waits for database to be healthy before starting
+- **Environment Configuration**: Uses `.env` file for environment variables
+- **Volume Persistence**: MySQL data persisted with named volume `mysql_data`
+- **Port Mapping**: Web app on `localhost:8000`, MySQL on `localhost:3307`
+
+**Database Setup in Docker:**
+- Create database: `application`
+- MySQL 5.7 with root password authentication
+- Automatic table creation on application startup
+- Health check ensures database is ready before web service starts
+
 ## Development Notes
 
 - The application creates all tables automatically on startup via `BaseSaveModel.metadata.create_all(bind=engine)`
 - Echo is enabled on all database engines for development (shows SQL queries)
 - CORS is configured for `localhost:3000` and `localhost:8080`
 - Pagination is implemented with `page`, `per_page`, `total_pages`, `has_next`, `has_prev` metadata
+- Docker setup includes proper service orchestration with health checks
+- Environment variables can be configured via `.env` file for Docker deployment

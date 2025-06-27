@@ -21,6 +21,8 @@ A robust REST API built with FastAPI and SQLAlchemy that implements a user accou
 - **JWT**: Token-based authentication
 - **Pydantic**: Data validation and serialization
 - **Uvicorn**: High-performance ASGI server
+- **Docker**: Containerization platform
+- **Docker Compose**: Multi-container orchestration
 
 ## 📁 Project Structure
 
@@ -55,10 +57,35 @@ app/
 ### Prerequisites
 
 - Python 3.8+
-- MySQL Server
+- MySQL Server (for local development)
+- Docker & Docker Compose (for containerized deployment)
 - pip (Python package manager)
 
-### Installation
+### Quick Start with Docker (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd my_fastapi_project
+   ```
+
+2. **Create environment file**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Run with Docker Compose**
+   ```bash
+   docker-compose up --build
+   ```
+
+4. **Access the application**
+   - API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+   - MySQL: localhost:3307
+
+### Local Development Installation
 
 1. **Clone the repository**
    ```bash
