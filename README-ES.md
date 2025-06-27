@@ -29,29 +29,43 @@ Una API REST robusta construida con FastAPI y SQLAlchemy que implementa un siste
 ## 📁 Estructura del Proyecto
 
 ```
-app/
-├── api/
-│   ├── deps.py              # Inyección de dependencias
-│   └── routes/
-│       ├── account.py       # Endpoints de cuentas
-│       ├── player.py        # Endpoints de jugadores
-│       └── guild.py         # Endpoints de gremios
-├── core/
-│   ├── hashers.py          # Utilidades de hash de contraseñas
-│   └── security.py         # JWT y seguridad
-├── crud/
-│   └── account.py          # Operaciones CRUD para cuentas
-├── models/
-│   ├── account.py          # Modelo de cuenta de usuario
-│   ├── player.py           # Modelo de jugador
-│   └── guild.py            # Modelo de gremio
-├── schemas/
-│   ├── account.py          # Esquemas Pydantic para cuentas
-│   ├── player.py           # Esquemas de jugadores
-│   └── guild.py            # Esquemas de gremios
-├── config.py               # Configuración de la aplicación
-├── database.py             # Configuración de base de datos
-└── main.py                 # Punto de entrada de la aplicación
+my_fastapi_project/
+├── app/
+│   ├── api/
+│   │   ├── deps.py              # Inyección de dependencias
+│   │   └── routes/
+│   │       ├── account.py       # Endpoints de cuentas
+│   │       ├── player.py        # Endpoints de jugadores
+│   │       └── guild.py         # Endpoints de gremios
+│   ├── core/
+│   │   ├── hashers.py          # Utilidades de hash de contraseñas
+│   │   └── security.py         # JWT y seguridad
+│   ├── crud/
+│   │   └── account.py          # Operaciones CRUD para cuentas
+│   ├── models/
+│   │   ├── account.py          # Modelo de cuenta de usuario
+│   │   ├── player.py           # Modelo de jugador
+│   │   └── guild.py            # Modelo de gremio
+│   ├── schemas/
+│   │   ├── account.py          # Esquemas Pydantic para cuentas
+│   │   ├── player.py           # Esquemas de jugadores
+│   │   └── guild.py            # Esquemas de gremios
+│   ├── config.py               # Configuración de la aplicación
+│   ├── database.py             # Configuración de base de datos
+│   └── main.py                 # Punto de entrada de la aplicación
+├── compose/
+│   └── api/
+│       ├── Dockerfile          # Definición de imagen Docker
+│       ├── entrypoint.sh       # Script de inicio del contenedor
+│       └── init.sql            # Inicialización de base de datos
+├── docker-compose.yml          # Orquestación de servicios
+├── requirements.txt            # Dependencias de Python
+├── .env                        # Variables de entorno
+├── .gitignore                  # Reglas de ignorar para Git
+├── .dockerignore              # Reglas de ignorar para Docker
+├── CLAUDE.md                   # Guía de desarrollo
+├── README.md                   # Documentación del proyecto (Inglés)
+└── README-ES.md               # Documentación del proyecto (Español)
 ```
 
 ## 🚀 Instalación y Configuración
@@ -110,8 +124,8 @@ app/
    Crear un archivo `.env` en la raíz del proyecto:
    ```env
    DATABASE_URL_APP=mysql+pymysql://usuario:contraseña@host:puerto/application
-   DATABASE_URL_ACCOUNT=mysql+pymysql://usuario:contraseña@host:puerto/srv1_account
-   DATABASE_URL_PLAYER=mysql+pymysql://usuario:contraseña@host:puerto/srv1_player
+   DATABASE_URL_ACCOUNT=mysql+pymysql://usuario:contraseña@host:puerto/account
+   DATABASE_URL_PLAYER=mysql+pymysql://usuario:contraseña@host:puerto/player
    SECRET_KEY=tu-clave-secreta-muy-segura
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -120,8 +134,6 @@ app/
 5. **Crear bases de datos**
    ```sql
    CREATE DATABASE application;
-   CREATE DATABASE srv1_account;
-   CREATE DATABASE srv1_player;
    ```
 
 6. **Ejecutar la aplicación**

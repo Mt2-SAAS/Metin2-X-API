@@ -29,29 +29,43 @@ A robust REST API built with FastAPI and SQLAlchemy that implements a user accou
 ## 📁 Project Structure
 
 ```
-app/
-├── api/
-│   ├── deps.py              # Dependency injection
-│   └── routes/
-│       ├── account.py       # Account endpoints
-│       ├── player.py        # Player endpoints
-│       └── guild.py         # Guild endpoints
-├── core/
-│   ├── hashers.py          # Password hashing utilities
-│   └── security.py         # JWT and security
-├── crud/
-│   └── account.py          # CRUD operations for accounts
-├── models/
-│   ├── account.py          # User account model
-│   ├── player.py           # Player model
-│   └── guild.py            # Guild model
-├── schemas/
-│   ├── account.py          # Pydantic schemas for accounts
-│   ├── player.py           # Player schemas
-│   └── guild.py            # Guild schemas
-├── config.py               # Application configuration
-├── database.py             # Database configuration
-└── main.py                 # Application entry point
+my_fastapi_project/
+├── app/
+│   ├── api/
+│   │   ├── deps.py              # Dependency injection
+│   │   └── routes/
+│   │       ├── account.py       # Account endpoints
+│   │       ├── player.py        # Player endpoints
+│   │       └── guild.py         # Guild endpoints
+│   ├── core/
+│   │   ├── hashers.py          # Password hashing utilities
+│   │   └── security.py         # JWT and security
+│   ├── crud/
+│   │   └── account.py          # CRUD operations for accounts
+│   ├── models/
+│   │   ├── account.py          # User account model
+│   │   ├── player.py           # Player model
+│   │   └── guild.py            # Guild model
+│   ├── schemas/
+│   │   ├── account.py          # Pydantic schemas for accounts
+│   │   ├── player.py           # Player schemas
+│   │   └── guild.py            # Guild schemas
+│   ├── config.py               # Application configuration
+│   ├── database.py             # Database configuration
+│   └── main.py                 # Application entry point
+├── compose/
+│   └── api/
+│       ├── Dockerfile          # Docker image definition
+│       ├── entrypoint.sh       # Container startup script
+│       └── init.sql            # Database initialization
+├── docker-compose.yml          # Service orchestration
+├── requirements.txt            # Python dependencies
+├── .env                        # Environment variables
+├── .gitignore                  # Git ignore rules
+├── .dockerignore              # Docker ignore rules
+├── CLAUDE.md                   # Development guidance
+├── README.md                   # Project documentation (English)
+└── README-ES.md               # Project documentation (Spanish)
 ```
 
 ## 🚀 Installation and Setup
@@ -110,8 +124,8 @@ app/
    Create a `.env` file in the project root:
    ```env
    DATABASE_URL_APP=mysql+pymysql://username:password@host:port/application
-   DATABASE_URL_ACCOUNT=mysql+pymysql://username:password@host:port/srv1_account
-   DATABASE_URL_PLAYER=mysql+pymysql://username:password@host:port/srv1_player
+   DATABASE_URL_ACCOUNT=mysql+pymysql://username:password@host:port/account
+   DATABASE_URL_PLAYER=mysql+pymysql://username:password@host:port/player
    SECRET_KEY=your-very-secure-secret-key
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
