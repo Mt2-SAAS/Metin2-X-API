@@ -31,6 +31,15 @@ SessionLocalAccount = sessionmaker(autocommit=False, autoflush=False, bind=accou
 SessionLocalPlayer = sessionmaker(autocommit=False, autoflush=False, bind=player_engine)
 
 
+def get_db() -> Generator[Session]:
+    """Dependency para obtener sesión de base de datos account"""
+    db_account = SessionApp()
+    try:
+        yield db_account
+    finally:
+        db_account.close()
+
+
 def get_acount_db() -> Generator[Session]:
     """Dependency para obtener sesión de base de datos account"""
     db_account = SessionLocalAccount()
