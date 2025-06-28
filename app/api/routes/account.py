@@ -4,6 +4,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 # Local Imports
 from app.core.security import create_access_token
 from app.config import settings
+from app.models.player import Player
+from app.schemas.player import PlayerUserResponse
 from app.schemas.account import (
     AccountCreate, 
     AccountUpdate, 
@@ -102,3 +104,11 @@ def update_password_account_me(
         )
     db_obj = account.update_password(db_obj=acc, new_password=account_in.new_password)
     return db_obj
+
+
+@router.get("/me/players", response_model=PlayerUserResponse)
+def get_player(
+    current_account: current_account_dependency,
+):
+    players = Player.filter(Player.account_id==current_account.id).all()
+    return PlayerUserResponse(players=players)

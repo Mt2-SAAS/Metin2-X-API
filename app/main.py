@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # Local Imports
 from .database import BaseSaveModel, engine
-from .api.routes import account, player, guild
+from .api.routes import account, game
 
 # Crear las tablas en la base de datos
 BaseSaveModel.metadata.create_all(bind=engine)
@@ -25,8 +25,7 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(account.router, prefix="/api")
-app.include_router(player.router, prefix="/api")
-app.include_router(guild.router, prefix="/api")
+app.include_router(game.router, prefix="/api")
 
 @app.get("/")
 def read_root():
