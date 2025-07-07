@@ -9,10 +9,11 @@ Una API REST robusta construida con FastAPI y SQLAlchemy que implementa un siste
 - **Autenticación JWT**: Sistema de autenticación seguro basado en tokens
 - **Arquitectura de Triple Base de Datos**: Separa datos de aplicación principal, cuenta legacy y jugador/gremio legacy en bases de datos independientes
 - **API RESTful**: Endpoints bien estructurados siguiendo las mejores prácticas
-- **Paginación**: Paginación automática para listados que optimiza el rendimiento
+- **Modelos Base Personalizados**: Operaciones CRUD específicas por base de datos con métodos integrados
 - **Validación de Datos**: Esquemas Pydantic para validación robusta de entrada y salida
 - **CORS Configurado**: Listo para integración con aplicaciones frontend
 - **Documentación Automática**: Swagger UI y ReDoc incluidos
+- **Soporte Docker**: Contenedorización completa con verificaciones de salud
 
 ## 🛠️ Tecnologías
 
@@ -35,8 +36,7 @@ my_fastapi_project/
 │   │   ├── deps.py              # Inyección de dependencias
 │   │   └── routes/
 │   │       ├── account.py       # Endpoints de cuentas
-│   │       ├── player.py        # Endpoints de jugadores
-│   │       └── guild.py         # Endpoints de gremios
+│   │       └── game.py          # Endpoints de juego (jugadores, gremios)
 │   ├── core/
 │   │   ├── hashers.py          # Utilidades de hash de contraseñas
 │   │   └── security.py         # JWT y seguridad
@@ -44,14 +44,13 @@ my_fastapi_project/
 │   │   └── account.py          # Operaciones CRUD para cuentas
 │   ├── models/
 │   │   ├── account.py          # Modelo de cuenta de usuario
-│   │   ├── player.py           # Modelo de jugador
-│   │   └── guild.py            # Modelo de gremio
+│   │   ├── player.py           # Modelos de jugador y gremio
+│   │   └── application.py      # Modelos de aplicación
 │   ├── schemas/
 │   │   ├── account.py          # Esquemas Pydantic para cuentas
-│   │   ├── player.py           # Esquemas de jugadores
-│   │   └── guild.py            # Esquemas de gremios
+│   │   └── player.py           # Esquemas de jugadores
 │   ├── config.py               # Configuración de la aplicación
-│   ├── database.py             # Configuración de base de datos
+│   ├── database.py             # Configuración multi-base de datos
 │   └── main.py                 # Punto de entrada de la aplicación
 ├── compose/
 │   └── api/
@@ -120,12 +119,12 @@ my_fastapi_project/
    pip install -r requirements.txt
    ```
 
-4. **Configurar variables de entorno** (opcional)
+4. **Configurar variables de entorno**
    Crear un archivo `.env` en la raíz del proyecto:
    ```env
    DATABASE_URL_APP=mysql+pymysql://usuario:contraseña@host:puerto/application
-   DATABASE_URL_ACCOUNT=mysql+pymysql://usuario:contraseña@host:puerto/account
-   DATABASE_URL_PLAYER=mysql+pymysql://usuario:contraseña@host:puerto/player
+   DATABASE_URL_ACCOUNT=mysql+pymysql://usuario:contraseña@host:puerto/srv1_account
+   DATABASE_URL_PLAYER=mysql+pymysql://usuario:contraseña@host:puerto/srv1_player
    SECRET_KEY=tu-clave-secreta-muy-segura
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -134,6 +133,8 @@ my_fastapi_project/
 5. **Crear bases de datos**
    ```sql
    CREATE DATABASE application;
+   CREATE DATABASE srv1_account;
+   CREATE DATABASE srv1_player;
    ```
 
 6. **Ejecutar la aplicación**
@@ -142,39 +143,6 @@ my_fastapi_project/
    # O usar uvicorn directamente
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
-
-## 🐳 Configuración Docker
-
-El proyecto incluye una configuración Docker completa con las siguientes características:
-
-### Servicios Docker
-- **Servicio Web**: Aplicación FastAPI ejecutándose en Python 3.13
-- **Servicio Base de Datos**: MySQL 5.7 con verificaciones de salud
-- **Dependencias de Servicios**: El servicio web espera a que la base de datos esté saludable
-
-### Características Docker
-- **Verificaciones de Salud**: El servicio MySQL incluye monitoreo automático de salud
-- **Persistencia de Volúmenes**: Datos de base de datos persistidos con volúmenes nombrados
-- **Configuración de Entorno**: Usa archivo `.env` para configuración
-- **Orquestación de Servicios**: Secuencia de inicio adecuada con gestión de dependencias
-
-### Comandos Docker
-```bash
-# Construir y ejecutar servicios
-docker-compose up --build
-
-# Ejecutar en modo separado
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f web
-
-# Detener servicios
-docker-compose down
-
-# Eliminar volúmenes (precaución: elimina datos)
-docker-compose down -v
-```
 
 ## 📚 Endpoints de la API
 
@@ -224,7 +192,8 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "social_id": "7654321"
+  "social_id": "7654321",
+  "email": "nuevoemail@ejemplo.com"
 }
 ```
 
@@ -240,11 +209,11 @@ Content-Type: application/json
 }
 ```
 
-### Jugadores
+### Características del Juego
 
 #### Listar Jugadores
 ```http
-GET /api/player/players?page=1&per_page=20
+GET /api/game/players
 ```
 
 **Respuesta:**
@@ -258,21 +227,13 @@ GET /api/player/players?page=1&per_page=20
       "level": 85,
       "exp": 450000
     }
-  ],
-  "total": 150,
-  "page": 1,
-  "per_page": 20,
-  "total_pages": 8,
-  "has_next": true,
-  "has_prev": false
+  ]
 }
 ```
 
-### Gremios
-
 #### Listar Gremios
 ```http
-GET /api/guild/guilds?page=1&per_page=20
+GET /api/game/guilds
 ```
 
 **Respuesta:**
@@ -284,15 +245,12 @@ GET /api/guild/guilds?page=1&per_page=20
       "name": "MataDragones",
       "master": 12345,
       "level": 50,
-      "exp": 25000
+      "exp": 25000,
+      "win": 15,
+      "draw": 3,
+      "loss": 2
     }
-  ],
-  "total": 150,
-  "page": 1,
-  "per_page": 20,
-  "total_pages": 8,
-  "has_next": true,
-  "has_prev": false
+  ]
 }
 ```
 
@@ -302,9 +260,9 @@ GET /api/guild/guilds?page=1&per_page=20
 
 | Variable | Descripción | Valor por Defecto |
 |----------|-------------|-------------------|
-| `DATABASE_URL_APP` | URL de conexión de la base de datos principal | `mysql+pymysql://usuario:contraseña@HOSTNAME_IP:3306/application` |
-| `DATABASE_URL_ACCOUNT` | URL de conexión de la base de datos de cuentas legacy | `mysql+pymysql://usuario:contraseña@HOSTNAME_IP:3306/account` |
-| `DATABASE_URL_PLAYER` | URL de conexión de la base de datos de jugadores legacy | `mysql+pymysql://usuario:contraseña@HOSTNAME_IP:3306/player` |
+| `DATABASE_URL_APP` | URL de conexión de la base de datos principal | `mysql+pymysql://usuario:contraseña@HOSTNAME:PUERTO/application` |
+| `DATABASE_URL_ACCOUNT` | URL de conexión de la base de datos de cuentas legacy | `mysql+pymysql://usuario:contraseña@HOSTNAME:PUERTO/srv1_account` |
+| `DATABASE_URL_PLAYER` | URL de conexión de la base de datos de jugadores legacy | `mysql+pymysql://usuario:contraseña@HOSTNAME:PUERTO/srv1_player` |
 | `SECRET_KEY` | Clave secreta JWT | `tu-clave-secreta` |
 | `ALGORITHM` | Algoritmo de encriptación JWT | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Tiempo de expiración del token (minutos) | `30` |
@@ -358,6 +316,38 @@ Usa el sistema de inyección de dependencias de FastAPI para:
 - Autenticación y autorización de usuarios
 - Operaciones CRUD específicas de base de datos
 
+## 🐳 Configuración Docker
+
+El proyecto incluye soporte Docker completo con:
+
+- **Configuración multi-servicio**: API y base de datos MySQL
+- **Verificaciones de salud**: Verificación de disponibilidad de base de datos
+- **Persistencia de volúmenes**: Los datos sobreviven a reinicios de contenedores
+- **Configuración de entorno**: Opciones de despliegue flexibles
+
+### Servicios Docker
+- **API**: Aplicación FastAPI en puerto 8000
+- **Base de datos**: MySQL 5.7 en puerto 3307
+
+### Comandos Docker
+
+```bash
+# Construir y ejecutar
+docker-compose up --build
+
+# Ejecutar en segundo plano
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f api
+
+# Detener servicios
+docker-compose down
+
+# Eliminar volúmenes (precaución: elimina datos)
+docker-compose down -v
+```
+
 ## 🚀 Desarrollo
 
 ### Ejecutar en Modo Desarrollo
@@ -365,12 +355,11 @@ Usa el sistema de inyección de dependencias de FastAPI para:
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Estructura de Respuestas
+### Características de Desarrollo
 
-Las respuestas siguen un formato consistente:
-- **Éxito**: Datos solicitados con códigos HTTP apropiados
-- **Error**: Mensajes descriptivos con códigos de estado HTTP estándar
-- **Paginación**: Metadatos completos de paginación incluidos
+- **Creación Automática de Tablas**: Las tablas se crean al iniciar la aplicación
+- **Registro de Consultas SQL**: Modo echo habilitado para depuración
+- **Recarga en Caliente**: Reinicio automático en cambios de código (con --reload)
 
 ## 📝 Licencia
 

@@ -55,14 +55,6 @@ class Account(BaseSaveAccountModel):
         default="OK",
         nullable=False
     )
-
-    @validates('status')
-    def validate_status(self, key, value):
-        """Validar que el status sea uno de los valores permitidos"""
-        valid_statuses = [choice[0] for choice in self.STATUS_ACCOUNT_CHOICES]
-        if value not in valid_statuses:
-            raise ValueError(f"Status must be one of: {valid_statuses}")
-        return value
     
     def __repr__(self):
         return f"<Account(id={self.id}, login='{self.login}')>"

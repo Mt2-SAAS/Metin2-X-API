@@ -16,7 +16,7 @@ class PlayerUserResponse(BaseModel):
     players: List[PlayerResponse]
 
 class PaginatedPlayersResponse(BaseModel):
-    players: List[PlayerResponse]
+    response: List[PlayerResponse]
     total: int
     page: int
     per_page: int
@@ -35,7 +35,7 @@ class GuildResponse(BaseModel):
 
 
 class PaginatedGuildsResponse(BaseModel):
-    guilds: List[GuildResponse]
+    response: List[GuildResponse]
     total: int
     page: int
     per_page: int

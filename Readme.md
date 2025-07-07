@@ -9,10 +9,11 @@ A robust REST API built with FastAPI and SQLAlchemy that implements a user accou
 - **JWT Authentication**: Secure token-based authentication system
 - **Triple-Database Architecture**: Separates main application, legacy account, and legacy player/guild data into independent databases
 - **RESTful API**: Well-structured endpoints following best practices
-- **Pagination**: Automatic pagination for listings to optimize performance
+- **Custom Base Models**: Database-specific CRUD operations with built-in methods
 - **Data Validation**: Pydantic schemas for robust input and output validation
 - **CORS Configured**: Ready for frontend application integration
 - **Automatic Documentation**: Swagger UI and ReDoc included
+- **Docker Support**: Complete containerization with health checks
 
 ## 🛠️ Technologies
 
@@ -35,8 +36,7 @@ my_fastapi_project/
 │   │   ├── deps.py              # Dependency injection
 │   │   └── routes/
 │   │       ├── account.py       # Account endpoints
-│   │       ├── player.py        # Player endpoints
-│   │       └── guild.py         # Guild endpoints
+│   │       └── game.py          # Game endpoints (players, guilds)
 │   ├── core/
 │   │   ├── hashers.py          # Password hashing utilities
 │   │   └── security.py         # JWT and security
@@ -44,14 +44,13 @@ my_fastapi_project/
 │   │   └── account.py          # CRUD operations for accounts
 │   ├── models/
 │   │   ├── account.py          # User account model
-│   │   ├── player.py           # Player model
-│   │   └── guild.py            # Guild model
+│   │   ├── player.py           # Player and guild models
+│   │   └── application.py      # Application models
 │   ├── schemas/
 │   │   ├── account.py          # Pydantic schemas for accounts
-│   │   ├── player.py           # Player schemas
-│   │   └── guild.py            # Guild schemas
+│   │   └── player.py           # Player schemas
 │   ├── config.py               # Application configuration
-│   ├── database.py             # Database configuration
+│   ├── database.py             # Multi-database configuration
 │   └── main.py                 # Application entry point
 ├── compose/
 │   └── api/
@@ -120,12 +119,12 @@ my_fastapi_project/
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables** (optional)
+4. **Configure environment variables**
    Create a `.env` file in the project root:
    ```env
    DATABASE_URL_APP=mysql+pymysql://username:password@host:port/application
-   DATABASE_URL_ACCOUNT=mysql+pymysql://username:password@host:port/account
-   DATABASE_URL_PLAYER=mysql+pymysql://username:password@host:port/player
+   DATABASE_URL_ACCOUNT=mysql+pymysql://username:password@host:port/srv1_account
+   DATABASE_URL_PLAYER=mysql+pymysql://username:password@host:port/srv1_player
    SECRET_KEY=your-very-secure-secret-key
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -134,6 +133,8 @@ my_fastapi_project/
 5. **Create databases**
    ```sql
    CREATE DATABASE application;
+   CREATE DATABASE srv1_account;
+   CREATE DATABASE srv1_player;
    ```
 
 6. **Run the application**
@@ -191,7 +192,8 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "social_id": "7654321"
+  "social_id": "7654321",
+  "email": "newemail@example.com"
 }
 ```
 
@@ -207,11 +209,11 @@ Content-Type: application/json
 }
 ```
 
-### Players
+### Game Features
 
 #### List Players
 ```http
-GET /api/player/players?page=1&per_page=20
+GET /api/game/players
 ```
 
 **Response:**
@@ -225,21 +227,13 @@ GET /api/player/players?page=1&per_page=20
       "level": 85,
       "exp": 450000
     }
-  ],
-  "total": 150,
-  "page": 1,
-  "per_page": 20,
-  "total_pages": 8,
-  "has_next": true,
-  "has_prev": false
+  ]
 }
 ```
 
-### Guilds
-
 #### List Guilds
 ```http
-GET /api/guild/guilds?page=1&per_page=20
+GET /api/game/guilds
 ```
 
 **Response:**
@@ -252,14 +246,11 @@ GET /api/guild/guilds?page=1&per_page=20
       "master": 12345,
       "level": 50,
       "exp": 25000,
+      "win": 15,
+      "draw": 3,
+      "loss": 2
     }
-  ],
-  "total": 150,
-  "page": 1,
-  "per_page": 20,
-  "total_pages": 8,
-  "has_next": true,
-  "has_prev": false
+  ]
 }
 ```
 
@@ -269,9 +260,9 @@ GET /api/guild/guilds?page=1&per_page=20
 
 | Variable | Description | Default Value |
 |----------|-------------|---------------|
-| `DATABASE_URL_APP` | Main application database connection URL | `mysql+pymysql://username:password@HOSTNAME_IP:3306/application` |
-| `DATABASE_URL_ACCOUNT` | Legacy account database connection URL | `mysql+pymysql://username:password@HOSTNAME_IP:3306/account` |
-| `DATABASE_URL_PLAYER` | Legacy player database connection URL | `mysql+pymysql://username:password@HOSTNAME_IP:3306/player` |
+| `DATABASE_URL_APP` | Main application database connection URL | `mysql+pymysql://username:password@HOSTNAME:PORT/application` |
+| `DATABASE_URL_ACCOUNT` | Legacy account database connection URL | `mysql+pymysql://username:password@HOSTNAME:PORT/srv1_account` |
+| `DATABASE_URL_PLAYER` | Legacy player database connection URL | `mysql+pymysql://username:password@HOSTNAME:PORT/srv1_player` |
 | `SECRET_KEY` | JWT secret key | `your-secret-key` |
 | `ALGORITHM` | JWT encryption algorithm | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiration time (minutes) | `30` |
@@ -325,6 +316,38 @@ Uses FastAPI's dependency injection system for:
 - User authentication and authorization
 - Database-specific CRUD operations
 
+## 🐳 Docker Configuration
+
+The project includes complete Docker support with:
+
+- **Multi-service setup**: API and MySQL database
+- **Health checks**: Database readiness verification  
+- **Volume persistence**: Data survives container restarts
+- **Environment configuration**: Flexible deployment options
+
+### Docker Services
+- **API**: FastAPI application on port 8000
+- **Database**: MySQL 5.7 on port 3307
+
+### Docker Commands
+
+```bash
+# Build and run
+docker-compose up --build
+
+# Run in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f api  
+
+# Stop services
+docker-compose down
+
+# Remove volumes (caution: deletes data)
+docker-compose down -v
+```
+
 ## 🚀 Development
 
 ### Run in Development Mode
@@ -332,12 +355,11 @@ Uses FastAPI's dependency injection system for:
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Response Structure
+### Development Features
 
-Responses follow a consistent format:
-- **Success**: Requested data with appropriate HTTP codes
-- **Error**: Descriptive messages with standard HTTP status codes
-- **Pagination**: Complete pagination metadata included
+- **Automatic Table Creation**: Tables are created on application startup
+- **SQL Query Logging**: Echo mode enabled for debugging
+- **Hot Reload**: Automatic restart on code changes (with --reload)
 
 ## 📝 License
 
