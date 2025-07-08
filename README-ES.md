@@ -2,12 +2,14 @@
 
 [🇺🇸 English](README.md) | 🇪🇸 Español
 
-Una API REST robusta construida con FastAPI y SQLAlchemy que implementa un sistema de gestión de cuentas de usuario, jugadores y gremios con autenticación JWT y una arquitectura sofisticada de triple base de datos.
+Una API REST robusta construida con FastAPI y SQLAlchemy que implementa un sistema de gestión de cuentas de usuario, jugadores, gremios y descargas con autenticación JWT, autorización de administrador y una arquitectura sofisticada de cuádruple base de datos.
 
 ## 🚀 Características
 
 - **Autenticación JWT**: Sistema de autenticación seguro basado en tokens
-- **Arquitectura de Triple Base de Datos**: Separa datos de aplicación principal, cuenta legacy y jugador/gremio legacy en bases de datos independientes
+- **Arquitectura de Cuádruple Base de Datos**: Separa datos de aplicación principal, cuenta legacy, jugador/gremio legacy y datos administrativos en bases de datos independientes
+- **Autorización de Administrador**: Control de acceso basado en roles con niveles de autoridad
+- **Gestión de Descargas**: Sistema completo de gestión de archivos/contenido con funcionalidad de publicar/despublicar
 - **API RESTful**: Endpoints bien estructurados siguiendo las mejores prácticas
 - **Modelos Base Personalizados**: Operaciones CRUD específicas por base de datos con métodos integrados
 - **Validación de Datos**: Esquemas Pydantic para validación robusta de entrada y salida
@@ -41,14 +43,19 @@ my_fastapi_project/
 │   │   ├── hashers.py          # Utilidades de hash de contraseñas
 │   │   └── security.py         # JWT y seguridad
 │   ├── crud/
-│   │   └── account.py          # Operaciones CRUD para cuentas
+│   │   ├── account.py          # Operaciones CRUD para cuentas
+│   │   ├── download.py         # Operaciones CRUD para descargas
+│   │   └── common.py           # Operaciones CRUD para funciones admin
 │   ├── models/
 │   │   ├── account.py          # Modelo de cuenta de usuario
 │   │   ├── player.py           # Modelos de jugador y gremio
-│   │   └── application.py      # Modelos de aplicación
+│   │   ├── application.py      # Modelos de descarga y aplicación
+│   │   └── common.py           # Modelos de admin/GM
 │   ├── schemas/
 │   │   ├── account.py          # Esquemas Pydantic para cuentas
-│   │   └── player.py           # Esquemas de jugadores
+│   │   ├── player.py           # Esquemas de jugadores
+│   │   ├── download.py         # Esquemas de descargas
+│   │   └── common.py           # Esquemas de admin
 │   ├── config.py               # Configuración de la aplicación
 │   ├── database.py             # Configuración multi-base de datos
 │   └── main.py                 # Punto de entrada de la aplicación
@@ -125,6 +132,7 @@ my_fastapi_project/
    DATABASE_URL_APP=mysql+pymysql://usuario:contraseña@host:puerto/application
    DATABASE_URL_ACCOUNT=mysql+pymysql://usuario:contraseña@host:puerto/srv1_account
    DATABASE_URL_PLAYER=mysql+pymysql://usuario:contraseña@host:puerto/srv1_player
+   DATABASE_URL_COMMON=mysql+pymysql://usuario:contraseña@host:puerto/srv1_common
    SECRET_KEY=tu-clave-secreta-muy-segura
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -133,8 +141,6 @@ my_fastapi_project/
 5. **Crear bases de datos**
    ```sql
    CREATE DATABASE application;
-   CREATE DATABASE srv1_account;
-   CREATE DATABASE srv1_player;
    ```
 
 6. **Ejecutar la aplicación**
@@ -254,6 +260,115 @@ GET /api/game/guilds
 }
 ```
 
+### Gestión de Descargas
+
+#### Listar Descargas
+```http
+GET /api/game/downloads?page=1&per_page=10&category=cliente&published=true
+```
+
+**Parámetros de Consulta:**
+- `page`: Número de página (predeterminado: 1)
+- `per_page`: Elementos por página (predeterminado: 10, máximo: 100)
+- `category`: Filtrar por categoría (opcional)
+- `published`: Filtrar por estado de publicación (opcional)
+
+**Respuesta:**
+```json
+{
+  "response": [
+    {
+      "id": 1,
+      "provider": "Google Drive",
+      "size": 512.5,
+      "link": "https://drive.google.com/file/d/123456789/view",
+      "category": "cliente",
+      "published": true
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "per_page": 10,
+  "total_pages": 1,
+  "has_next": false,
+  "has_prev": false
+}
+```
+
+#### Obtener Descarga por ID
+```http
+GET /api/game/downloads/{download_id}
+```
+
+#### Crear Descarga (Solo Admin)
+```http
+POST /api/game/downloads
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "provider": "Google Drive",
+  "size": 512.5,
+  "link": "https://drive.google.com/file/d/123456789/view",
+  "category": "cliente",
+  "published": false
+}
+```
+
+#### Actualizar Descarga (Solo Admin)
+```http
+PUT /api/game/downloads/{download_id}
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "provider": "Mega",
+  "size": 600.0,
+  "link": "https://mega.nz/file/abcdef123456789",
+  "category": "parches",
+  "published": true
+}
+```
+
+#### Publicar Descarga (Solo Admin)
+```http
+PATCH /api/game/downloads/{download_id}/publish
+Authorization: Bearer <admin_token>
+```
+
+#### Despublicar Descarga (Solo Admin)
+```http
+PATCH /api/game/downloads/{download_id}/unpublish
+Authorization: Bearer <admin_token>
+```
+
+#### Eliminar Descarga (Solo Admin)
+```http
+DELETE /api/game/downloads/{download_id}
+Authorization: Bearer <admin_token>
+```
+
+#### Obtener Jugadores del Usuario Actual
+```http
+GET /api/account/me/players
+Authorization: Bearer <token>
+```
+
+**Respuesta:**
+```json
+{
+  "players": [
+    {
+      "account_id": 12345,
+      "name": "NombreJugador",
+      "job": 1,
+      "level": 85,
+      "exp": 450000
+    }
+  ]
+}
+```
+
 ## 🔧 Configuración
 
 ### Variables de Entorno
@@ -263,6 +378,7 @@ GET /api/game/guilds
 | `DATABASE_URL_APP` | URL de conexión de la base de datos principal | `mysql+pymysql://usuario:contraseña@HOSTNAME:PUERTO/application` |
 | `DATABASE_URL_ACCOUNT` | URL de conexión de la base de datos de cuentas legacy | `mysql+pymysql://usuario:contraseña@HOSTNAME:PUERTO/srv1_account` |
 | `DATABASE_URL_PLAYER` | URL de conexión de la base de datos de jugadores legacy | `mysql+pymysql://usuario:contraseña@HOSTNAME:PUERTO/srv1_player` |
+| `DATABASE_URL_COMMON` | URL de conexión de la base de datos administrativa | `mysql+pymysql://usuario:contraseña@HOSTNAME:PUERTO/common` |
 | `SECRET_KEY` | Clave secreta JWT | `tu-clave-secreta` |
 | `ALGORITHM` | Algoritmo de encriptación JWT | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Tiempo de expiración del token (minutos) | `30` |
@@ -287,21 +403,23 @@ Una vez que la aplicación esté ejecutándose, puedes acceder a:
 
 ## 🏗️ Arquitectura
 
-### Configuración de Triple Base de Datos
+### Configuración de Cuádruple Base de Datos
 
-La aplicación usa tres bases de datos MySQL separadas:
+La aplicación usa cuatro bases de datos MySQL separadas:
 
-1. **application**: Base de datos principal de la aplicación para nuevas características y datos
+1. **application**: Base de datos principal de la aplicación para nuevas características y datos (descargas, etc.)
 2. **srv1_account**: Base de datos legacy que almacena información de autenticación y cuentas de usuario
 3. **srv1_player**: Base de datos legacy que maneja datos de jugadores y gremios
+4. **common**: Base de datos administrativa para gestión de GM/admin y autorización
 
 ### Modelos Personalizados
 
 Los modelos heredan de clases base personalizadas que corresponden a su base de datos objetivo:
 
-- **BaseSaveModel**: Para tablas de la base de datos principal de la aplicación
+- **BaseSaveModel**: Para tablas de la base de datos principal de la aplicación (descargas, etc.)
 - **BaseSaveAccountModel**: Para tablas de la base de datos de cuentas legacy
 - **BaseSavePlayerModel**: Para tablas de la base de datos de jugadores/gremios legacy
+- **BaseSaveCommonModel**: Para tablas de la base de datos administrativa (gestión GM/admin)
 
 Cada clase base incluye métodos convenientes:
 - `.save()`: Guardar en la base de datos apropiada
@@ -312,8 +430,9 @@ Cada clase base incluye métodos convenientes:
 ### Sistema de Dependencias
 
 Usa el sistema de inyección de dependencias de FastAPI para:
-- Gestión de sesiones multi-base de datos (bases de datos de aplicación, cuenta, jugador)
+- Gestión de sesiones multi-base de datos (bases de datos de aplicación, cuenta, jugador, común)
 - Autenticación y autorización de usuarios
+- Control de acceso basado en roles de admin
 - Operaciones CRUD específicas de base de datos
 
 ## 🐳 Configuración Docker

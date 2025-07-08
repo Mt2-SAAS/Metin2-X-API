@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A FastAPI-based REST API implementing a sophisticated triple-database architecture for managing user accounts, players, and guilds. The system separates modern application data from legacy account and player systems while maintaining seamless integration through custom base models.
+A FastAPI-based REST API implementing a sophisticated quad-database architecture for managing user accounts, players, guilds, and administrative features. The system separates modern application data from legacy account and player systems while adding a common database for administrative features, all maintaining seamless integration through custom base models.
 
 ## Development Commands
 
@@ -37,10 +37,11 @@ docker-compose logs -f api
 ```
 
 ### Database Management
-- The application uses a **triple MySQL database** architecture:
+- The application uses a **quad MySQL database** architecture:
   - `application` (main app database) - connected via `DATABASE_URL_APP`
   - `srv1_account` (legacy account database) - connected via `DATABASE_URL_ACCOUNT`
   - `srv1_player` (legacy player/guild database) - connected via `DATABASE_URL_PLAYER`
+  - `srv1_common` (administrative database) - connected via `DATABASE_URL_COMMON`
 - Database connections are configured in `app/config.py` with environment variable support
 - Uses SQLAlchemy with custom base models for each database
 - All tables are created automatically on application startup via `metadata.create_all()`
@@ -48,27 +49,31 @@ docker-compose logs -f api
 
 ## Architecture Overview
 
-### Triple-Database Setup
-The application implements a sophisticated three-database architecture:
-- **Application Database** (`DATABASE_URL_APP`): Main application database with `BaseSaveModel`
+### Quad-Database Setup
+The application implements a sophisticated four-database architecture:
+- **Application Database** (`DATABASE_URL_APP`): Main application database with `BaseSaveModel` for modern features like download management
 - **Account Database** (`DATABASE_URL_ACCOUNT`): Legacy account system with `BaseSaveAccountModel`  
 - **Player Database** (`DATABASE_URL_PLAYER`): Legacy player and guild data with `BaseSavePlayerModel`
+- **Common Database** (`DATABASE_URL_COMMON`): Administrative database with `BaseSaveCommonModel` for GM/admin management
 
 ### Core Components
 
 **Database Layer (`app/database.py`)**:
-- Three separate SQLAlchemy engines: `engine`, `account_engine`, `player_engine`
-- Three session makers: `SessionApp`, `SessionLocalAccount`, `SessionLocalPlayer`
-- Three custom base models with built-in CRUD methods:
-  - `BaseSaveModel` - for main app tables
+- Four separate SQLAlchemy engines: `engine`, `account_engine`, `player_engine`, `common_engine`
+- Four session makers: `SessionApp`, `SessionLocalAccount`, `SessionLocalPlayer`, `SessionLocalCommon`
+- Four custom base models with built-in CRUD methods:
+  - `BaseSaveModel` - for main app tables (downloads, etc.)
   - `BaseSaveAccountModel` - for account tables  
   - `BaseSavePlayerModel` - for player/guild tables
+  - `BaseSaveCommonModel` - for admin/GM tables
 - Dependency injection functions for each database session
 
 **Models Architecture**:
 - `Account` model extends `BaseSaveAccountModel` with authentication fields and status validation
 - `Player` model extends `BaseSavePlayerModel` with game character data (account_id, name, job, level, exp)
 - `Guild` model extends `BaseSavePlayerModel` with guild management data (name, master, level, exp, skills, war stats)
+- `Download` model extends `BaseSaveModel` with file management (title, description, filename, file_path, version, is_published)
+- `GMList` model extends `BaseSaveCommonModel` with admin authorization (account_id, authority_level)
 - All models inherit database-specific `.save()`, `.delete()`, `.filter()`, and `.query()` methods
 
 **Authentication System**:
@@ -76,6 +81,8 @@ The application implements a sophisticated three-database architecture:
 - Login-based authentication (not email-based)
 - Bearer token security with configurable expiration
 - Password hashing using custom hashers in `app/core/hashers.py`
+- Admin/GM authorization system with authority levels
+- Role-based access control for administrative endpoints
 
 **API Structure**:
 - Modular router system with separate route files for accounts and game features
@@ -89,25 +96,32 @@ The application implements a sophisticated three-database architecture:
 - `BaseSaveModel` → `SessionApp` (main application database)
 - `BaseSaveAccountModel` → `SessionLocalAccount` (legacy account database)
 - `BaseSavePlayerModel` → `SessionLocalPlayer` (legacy player database)
+- `BaseSaveCommonModel` → `SessionLocalCommon` (administrative database)
 
 **Dependency Injection**: Uses FastAPI's dependency system extensively:
 - `get_db()`: Main application database session
 - `get_acount_db()`: Account database session
 - `get_player_db()`: Player database session
+- `get_common_db()`: Common/administrative database session
+- `crud_account_dependency`: Account CRUD operations
+- `current_account_dependency`: Current authenticated account
+- `require_gm_level_implementor`: GM/admin authorization dependency
 
 **Configuration Management**: Uses `python-decouple` for environment-based configuration with sensible defaults.
 
 ## Database Connection Details
 
-The application connects to three MySQL databases:
+The application connects to four MySQL databases:
 - Main App DB: `mysql+pymysql://user:pass@host:port/application`
 - Account DB: `mysql+pymysql://user:pass@host:port/srv1_account`
 - Player DB: `mysql+pymysql://user:pass@host:port/srv1_player`
+- Common DB: `mysql+pymysql://user:pass@host:port/srv1_common`
 
 Configure via environment variables:
 - `DATABASE_URL_APP`
 - `DATABASE_URL_ACCOUNT`
 - `DATABASE_URL_PLAYER`
+- `DATABASE_URL_COMMON`
 - `SECRET_KEY`
 - `ALGORITHM`
 - `ACCESS_TOKEN_EXPIRE_MINUTES`
@@ -115,10 +129,87 @@ Configure via environment variables:
 ## API Endpoints
 
 **Account Management** (`/api/account/`):
-- Authentication and account management endpoints
+- `POST /register` - Create new account (with login and email validation)
+- `POST /token` - Login and get access token (using login as username)
+- `GET /me` - Get current account information
+- `GET /me/is_admin` - Check if current account is admin/GM
+- `PUT /me` - Update current account information (with social_id validation)
+- `PUT /me/password` - Update account password with old password verification
+- `GET /me/players` - Get all players for logged-in account
 
 **Game Features** (`/api/game/`):
-- Player and guild management endpoints
+- `GET /players` - List all players with pagination (ordered by level)
+- `GET /guilds` - List all guilds with pagination (ordered by level)
+- Download management system with full CRUD operations and admin protection
+- All admin-only endpoints require GM/admin authorization
+
+## New Features
+
+### Download Management System
+A comprehensive file/content management system with the following capabilities:
+
+**Public Endpoints:**
+- `GET /api/game/downloads` - List downloads with pagination, search, and filtering
+  - Query parameters: `page`, `per_page`, `category`, `provider`, `published_only`, `search`
+  - Advanced search across provider, category, and link fields
+  - Category and provider filtering
+  - Published-only filtering option
+
+**Admin-Only Endpoints** (require GM/admin authorization):
+- `GET /api/game/downloads/{id}` - Get specific download details
+- `POST /api/game/downloads` - Create new download
+- `PUT /api/game/downloads/{id}` - Update download
+- `PATCH /api/game/downloads/{id}/publish` - Publish download
+- `PATCH /api/game/downloads/{id}/unpublish` - Unpublish download
+- `DELETE /api/game/downloads/{id}` - Delete download
+
+**Features:**
+- Full CRUD operations with validation
+- Publish/unpublish functionality  
+- Advanced search across provider, category, and link fields
+- Multiple filtering options (category, provider, published status)
+- Pagination with metadata (total, pages, navigation)
+- Admin-only management endpoints with GM authorization
+- Automatic timestamp tracking via BaseSaveModel
+
+### Admin/GM Authorization System
+Role-based access control system for administrative features:
+
+**Features:**
+- Authority level-based permissions
+- Admin verification through `GMList` model
+- Protected endpoints using `require_gm_level_implementor` dependency
+- Integration with JWT authentication
+- Centralized admin management via common database
+
+**Usage:**
+```python
+from app.core.deps import require_gm_level_implementor
+# Protect endpoints with GM authorization
+@router.post("/admin-endpoint")
+async def admin_only_endpoint(
+    admin_account: require_gm_level_implementor
+):
+    # Admin-only logic here
+    pass
+```
+
+### Enhanced Account System
+Extended account management with comprehensive user operations:
+
+**New Features:**
+- Complete account registration with login and email validation
+- Secure password update with old password verification
+- Social ID validation (7-digit numeric format)
+- Account status management (OK/BANNED)
+- Admin verification endpoint
+- Player-to-account relationship mapping
+
+**Security Features:**
+- JWT-based authentication with login as identifier
+- Password hashing with custom hashers
+- Role-based access control integration
+- Account uniqueness validation (login and email)
 
 ## Model Schema Overview
 
@@ -134,6 +225,16 @@ Configure via environment variables:
 - `id` (PK), `name`, `sp`, `master`, `level`, `exp`
 - `skill_point`, `skill`, `win`, `draw`, `loss`
 - `ladder_point`, `gold`
+
+**Download Model** (BaseSaveModel):
+- `id` (PK), `provider`, `size` (DECIMAL), `link` (TEXT), `category`
+- `published` (BOOLEAN) - publication status for content management
+- Full content management with publish/unpublish functionality
+- Advanced search and filtering capabilities
+
+**GMList Model** (BaseSaveCommonModel):
+- `account_id` (PK), `authority_level`
+- Admin authorization and role-based access control
 
 ## Docker Configuration
 
@@ -156,7 +257,7 @@ The application includes a complete Docker setup with health checks and proper s
 **Database Setup in Docker:**
 - Creates database: `application` (other databases are external legacy systems)
 - MySQL 5.7 with configurable authentication
-- Automatic table creation on application startup
+- Automatic table creation on application startup for application databases
 - Health check ensures database is ready before API service starts
 
 **Docker Commands:**
@@ -185,6 +286,25 @@ docker-compose down -v
 - Docker setup includes proper service orchestration with health checks
 - Environment variables can be configured via `.env` file for Docker deployment
 
+## Current Development Status
+
+**Recently Implemented:**
+- Complete account management system with registration, login, and profile management
+- Admin verification system with GM-level access control
+- Download management system with full CRUD operations
+- Advanced search and filtering capabilities for downloads
+- Player listing with pagination and level-based ordering
+- Guild management with comprehensive data display
+- Role-based access control for administrative endpoints
+
+**Active Features:**
+- Multi-database architecture (4 databases: app, account, player, common)
+- JWT-based authentication with login as identifier
+- Custom base models with built-in CRUD methods
+- Comprehensive API documentation with proper schemas
+- Admin-only endpoints for content management
+- Pagination with metadata for all list endpoints
+
 ## File Structure and Key Components
 
 ### Core Application Files
@@ -199,6 +319,10 @@ docker-compose down -v
 
 ### Data Layer
 - `app/models/`: SQLAlchemy models extending database-specific base classes
+  - `account.py`: Account model for authentication
+  - `player.py`: Player and Guild models for game data
+  - `application.py`: Download model for content management
+  - `common.py`: GMList model for admin authorization
 - `app/schemas/`: Pydantic schemas for request/response validation
 - `app/crud/`: CRUD operations abstraction layer
 
@@ -216,9 +340,10 @@ docker-compose down -v
 
 ### When Working with Models
 - Always use the appropriate base class for each database
-- Use `BaseSaveModel` for new application features
+- Use `BaseSaveModel` for new application features (downloads, etc.)
 - Use `BaseSaveAccountModel` for account-related operations
 - Use `BaseSavePlayerModel` for player and guild operations
+- Use `BaseSaveCommonModel` for administrative features
 
 ### When Adding New Endpoints
 - Follow the existing router pattern in `app/api/routes/`
@@ -229,7 +354,7 @@ docker-compose down -v
 ### Database Migrations
 - Currently using `metadata.create_all()` for table creation
 - For production, consider implementing proper migration system
-- Test all database operations across all three databases
+- Test all database operations across all four databases
 
 ### Testing
 - Set up test databases separate from development/production

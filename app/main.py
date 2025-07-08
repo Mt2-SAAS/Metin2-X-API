@@ -24,8 +24,8 @@ app.add_middleware(
 )
 
 # Incluir routers
-app.include_router(account.router, prefix="/api")
-app.include_router(game.router, prefix="/api")
+app.include_router(account.router, prefix="/api/v1")
+app.include_router(game.router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():

@@ -2,12 +2,14 @@
 
 🇺🇸 English | [🇪🇸 Español](README-ES.md)
 
-A robust REST API built with FastAPI and SQLAlchemy that implements a user account, player, and guild management system with JWT authentication and sophisticated triple-database architecture.
+A robust REST API built with FastAPI and SQLAlchemy that implements a user account, player, guild, and download management system with JWT authentication, admin authorization, and sophisticated quad-database architecture.
 
 ## 🚀 Features
 
 - **JWT Authentication**: Secure token-based authentication system
-- **Triple-Database Architecture**: Separates main application, legacy account, and legacy player/guild data into independent databases
+- **Quad-Database Architecture**: Separates main application, legacy account, legacy player/guild, and administrative data into independent databases
+- **Admin Authorization**: Role-based access control with authority levels
+- **Download Management**: Complete file/content management system with publish/unpublish functionality
 - **RESTful API**: Well-structured endpoints following best practices
 - **Custom Base Models**: Database-specific CRUD operations with built-in methods
 - **Data Validation**: Pydantic schemas for robust input and output validation
@@ -41,14 +43,19 @@ my_fastapi_project/
 │   │   ├── hashers.py          # Password hashing utilities
 │   │   └── security.py         # JWT and security
 │   ├── crud/
-│   │   └── account.py          # CRUD operations for accounts
+│   │   ├── account.py          # CRUD operations for accounts
+│   │   ├── download.py         # CRUD operations for downloads
+│   │   └── common.py           # CRUD operations for admin features
 │   ├── models/
 │   │   ├── account.py          # User account model
 │   │   ├── player.py           # Player and guild models
-│   │   └── application.py      # Application models
+│   │   ├── application.py      # Download and application models
+│   │   └── common.py           # Admin/GM models
 │   ├── schemas/
 │   │   ├── account.py          # Pydantic schemas for accounts
-│   │   └── player.py           # Player schemas
+│   │   ├── player.py           # Player schemas
+│   │   ├── download.py         # Download schemas
+│   │   └── common.py           # Admin schemas
 │   ├── config.py               # Application configuration
 │   ├── database.py             # Multi-database configuration
 │   └── main.py                 # Application entry point
@@ -125,6 +132,7 @@ my_fastapi_project/
    DATABASE_URL_APP=mysql+pymysql://username:password@host:port/application
    DATABASE_URL_ACCOUNT=mysql+pymysql://username:password@host:port/srv1_account
    DATABASE_URL_PLAYER=mysql+pymysql://username:password@host:port/srv1_player
+   DATABASE_URL_COMMON=mysql+pymysql://username:password@host:port/common
    SECRET_KEY=your-very-secure-secret-key
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -133,8 +141,6 @@ my_fastapi_project/
 5. **Create databases**
    ```sql
    CREATE DATABASE application;
-   CREATE DATABASE srv1_account;
-   CREATE DATABASE srv1_player;
    ```
 
 6. **Run the application**
@@ -254,6 +260,115 @@ GET /api/game/guilds
 }
 ```
 
+### Download Management
+
+#### List Downloads
+```http
+GET /api/game/downloads?page=1&per_page=10&category=cliente&published=true
+```
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `per_page`: Items per page (default: 10, max: 100)
+- `category`: Filter by category (optional)
+- `published`: Filter by publication status (optional)
+
+**Response:**
+```json
+{
+  "response": [
+    {
+      "id": 1,
+      "provider": "Google Drive",
+      "size": 512.5,
+      "link": "https://drive.google.com/file/d/123456789/view",
+      "category": "cliente",
+      "published": true
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "per_page": 10,
+  "total_pages": 1,
+  "has_next": false,
+  "has_prev": false
+}
+```
+
+#### Get Download by ID
+```http
+GET /api/game/downloads/{download_id}
+```
+
+#### Create Download (Admin Only)
+```http
+POST /api/game/downloads
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "provider": "Google Drive",
+  "size": 512.5,
+  "link": "https://drive.google.com/file/d/123456789/view",
+  "category": "cliente",
+  "published": false
+}
+```
+
+#### Update Download (Admin Only)
+```http
+PUT /api/game/downloads/{download_id}
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "provider": "Mega",
+  "size": 600.0,
+  "link": "https://mega.nz/file/abcdef123456789",
+  "category": "parches",
+  "published": true
+}
+```
+
+#### Publish Download (Admin Only)
+```http
+PATCH /api/game/downloads/{download_id}/publish
+Authorization: Bearer <admin_token>
+```
+
+#### Unpublish Download (Admin Only)
+```http
+PATCH /api/game/downloads/{download_id}/unpublish
+Authorization: Bearer <admin_token>
+```
+
+#### Delete Download (Admin Only)
+```http
+DELETE /api/game/downloads/{download_id}
+Authorization: Bearer <admin_token>
+```
+
+#### Get Current User's Players
+```http
+GET /api/account/me/players
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "players": [
+    {
+      "account_id": 12345,
+      "name": "PlayerName",
+      "job": 1,
+      "level": 85,
+      "exp": 450000
+    }
+  ]
+}
+```
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -263,6 +378,7 @@ GET /api/game/guilds
 | `DATABASE_URL_APP` | Main application database connection URL | `mysql+pymysql://username:password@HOSTNAME:PORT/application` |
 | `DATABASE_URL_ACCOUNT` | Legacy account database connection URL | `mysql+pymysql://username:password@HOSTNAME:PORT/srv1_account` |
 | `DATABASE_URL_PLAYER` | Legacy player database connection URL | `mysql+pymysql://username:password@HOSTNAME:PORT/srv1_player` |
+| `DATABASE_URL_COMMON` | Administrative database connection URL | `mysql+pymysql://username:password@HOSTNAME:PORT/common` |
 | `SECRET_KEY` | JWT secret key | `your-secret-key` |
 | `ALGORITHM` | JWT encryption algorithm | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiration time (minutes) | `30` |
@@ -287,21 +403,23 @@ Once the application is running, you can access:
 
 ## 🏗️ Architecture
 
-### Triple Database Setup
+### Quad Database Setup
 
-The application uses three separate MySQL databases:
+The application uses four separate MySQL databases:
 
-1. **application**: Main application database for new features and data
+1. **application**: Main application database for new features and data (downloads, etc.)
 2. **srv1_account**: Legacy database storing authentication information and user accounts
 3. **srv1_player**: Legacy database handling player and guild data
+4. **common**: Administrative database for GM/admin management and authorization
 
 ### Custom Models
 
 Models inherit from custom base classes that correspond to their target database:
 
-- **BaseSaveModel**: For main application database tables
+- **BaseSaveModel**: For main application database tables (downloads, etc.)
 - **BaseSaveAccountModel**: For legacy account database tables  
 - **BaseSavePlayerModel**: For legacy player/guild database tables
+- **BaseSaveCommonModel**: For administrative database tables (GM/admin management)
 
 Each base class includes convenient methods:
 - `.save()`: Save to appropriate database
@@ -312,8 +430,9 @@ Each base class includes convenient methods:
 ### Dependency System
 
 Uses FastAPI's dependency injection system for:
-- Multi-database session management (application, account, player databases)
+- Multi-database session management (application, account, player, common databases)
 - User authentication and authorization
+- Admin role-based access control
 - Database-specific CRUD operations
 
 ## 🐳 Docker Configuration

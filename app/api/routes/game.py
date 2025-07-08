@@ -2,7 +2,9 @@ from fastapi import APIRouter, Query, HTTPException, Depends
 from math import ceil
 
 # Local Imports
-from app.api.deps import require_authority_level
+from app.api.deps import (
+    require_gm_level_implementor
+)
 from app.models.player import Player, Guild
 from app.crud.download import get_download, CRUDDownload
 
@@ -40,7 +42,7 @@ async def list_players(
         has_prev = page > 1
 
         return PaginatedPlayersResponse(
-            players=players,
+            response=players,
             total=total,
             page=page,
             per_page=per_page,
@@ -72,7 +74,7 @@ async def list_guilds(
         has_prev = page > 1
 
         return PaginatedGuildsResponse(
-            guilds=guilds,
+            response=guilds,
             total=total,
             page=page,
             per_page=per_page,
@@ -130,6 +132,7 @@ async def list_downloads(
 
 @router.get("/downloads/{download_id}", response_model=DownloadResponse)
 async def get_download_by_id(
+    _: require_gm_level_implementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -142,7 +145,7 @@ async def get_download_by_id(
 
 @router.post("/downloads", response_model=DownloadResponse)
 async def create_download(
-    _: require_authority_level,
+    _: require_gm_level_implementor,
     download: DownloadCreate,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -158,7 +161,7 @@ async def create_download(
 
 @router.put("/downloads/{download_id}", response_model=DownloadResponse)
 async def update_download(
-    _: require_authority_level,
+    _: require_gm_level_implementor,
     download_id: int,
     download_update: DownloadUpdate,
     crud: CRUDDownload = Depends(get_download)
@@ -179,7 +182,7 @@ async def update_download(
 
 @router.patch("/downloads/{download_id}/publish", response_model=DownloadResponse)
 async def publish_download(
-    _: require_authority_level,
+    _: require_gm_level_implementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -197,7 +200,7 @@ async def publish_download(
 
 @router.patch("/downloads/{download_id}/unpublish", response_model=DownloadResponse)
 async def unpublish_download(
-    _: require_authority_level,
+    _: require_gm_level_implementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -215,7 +218,7 @@ async def unpublish_download(
 
 @router.delete("/downloads/{download_id}")
 async def delete_download(
-    _: require_authority_level,
+    _: require_gm_level_implementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):

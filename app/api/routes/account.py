@@ -14,7 +14,8 @@ from app.schemas.account import (
 )
 from app.api.deps import (
     crud_account_dependency,
-    current_account_dependency
+    current_account_dependency,
+    require_gm_level_implementor
 )
 
 
@@ -69,6 +70,14 @@ def login_for_access_token(
 def read_account_me(current_account: current_account_dependency):
     """Obtener información de la cuenta actual"""
     return current_account
+
+
+@router.get("/me/is_admin", response_model=AccountBase)
+def is_gm_account(
+    admin_user: require_gm_level_implementor,
+):
+    """Verificar si la cuenta actual es administrador"""
+    return admin_user
 
 
 @router.put("/me", response_model=AccountBase)
