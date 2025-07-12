@@ -1,28 +1,33 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
+from app.schemas.site import SiteResponse
 
 
 class DownloadBase(BaseModel):
     """Base schema for Download with common fields"""
     provider: str = Field(..., max_length=100, description="Proveedor de la descarga")
-    size: float = Field(..., gt=0, description="Peso de la descarga en MB")
+    size: str = Field(..., max_length=100, description="Peso de la descarga")
     link: str = Field(..., description="URL del enlace de descarga")
     category: str = Field(..., max_length=50, description="Categoría de la descarga")
     published: bool = Field(default=False, description="Indica si la descarga está publicada")
+    site_id: int = Field(..., description="ID del sitio al que pertenece la descarga")
 
-    @validator('provider')
+    @field_validator('provider')
+    @classmethod
     def provider_must_not_be_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('El proveedor no puede estar vacío')
         return v.strip()
 
-    @validator('link')
+    @field_validator('link')
+    @classmethod
     def link_must_not_be_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('El enlace no puede estar vacío')
         return v.strip()
 
-    @validator('category')
+    @field_validator('category')
+    @classmethod
     def category_must_not_be_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('La categoría no puede estar vacía')
@@ -40,24 +45,28 @@ class DownloadCreate(DownloadBase):
 class DownloadUpdate(BaseModel):
     """Schema for updating download information"""
     provider: Optional[str] = Field(None, max_length=100, description="Proveedor de la descarga")
-    size: Optional[float] = Field(None, gt=0, description="Peso de la descarga en MB")
+    size: Optional[str] = Field(None, max_length=100, description="Peso de la descarga")
     link: Optional[str] = Field(None, description="URL del enlace de descarga")
     category: Optional[str] = Field(None, max_length=50, description="Categoría de la descarga")
     published: Optional[bool] = Field(None, description="Indica si la descarga está publicada")
+    site_id: Optional[int] = Field(None, description="ID del sitio al que pertenece la descarga")
 
-    @validator('provider')
+    @field_validator('provider')
+    @classmethod
     def provider_must_not_be_empty(cls, v):
         if v is not None and (not v or not v.strip()):
             raise ValueError('El proveedor no puede estar vacío')
         return v.strip() if v else v
 
-    @validator('link')
+    @field_validator('link')
+    @classmethod
     def link_must_not_be_empty(cls, v):
         if v is not None and (not v or not v.strip()):
             raise ValueError('El enlace no puede estar vacío')
         return v.strip() if v else v
 
-    @validator('category')
+    @field_validator('category')
+    @classmethod
     def category_must_not_be_empty(cls, v):
         if v is not None and (not v or not v.strip()):
             raise ValueError('La categoría no puede estar vacía')
@@ -86,10 +95,12 @@ class DownloadResponse(BaseModel):
     """Response schema for download operations"""
     id: int
     provider: str
-    size: float
+    size: str
     link: str
     category: str
     published: bool
+    site_id: int
+    site: Optional[SiteResponse] = None
 
     class Config:
         from_attributes = True

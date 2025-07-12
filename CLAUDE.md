@@ -61,20 +61,25 @@ The application implements a sophisticated four-database architecture:
 **Database Layer (`app/database.py`)**:
 - Four separate SQLAlchemy engines: `engine`, `account_engine`, `player_engine`, `common_engine`
 - Four session makers: `SessionApp`, `SessionLocalAccount`, `SessionLocalPlayer`, `SessionLocalCommon`
+- **TimestampMixin**: Provides automatic timestamp fields (`created_at`, `updated_at`) using SQLAlchemy's `func.now()`
 - Four custom base models with built-in CRUD methods:
-  - `BaseSaveModel` - for main app tables (downloads, etc.)
-  - `BaseSaveAccountModel` - for account tables  
-  - `BaseSavePlayerModel` - for player/guild tables
-  - `BaseSaveCommonModel` - for admin/GM tables
+  - `BaseSaveModel` - inherits from `TimestampMixin`, for main app tables (downloads, sites, images, pages)
+  - `BaseSaveAccountModel` - for account tables (no timestamps)
+  - `BaseSavePlayerModel` - for player/guild tables (no timestamps)
+  - `BaseSaveCommonModel` - for admin/GM tables (no timestamps)
 - Dependency injection functions for each database session
 
 **Models Architecture**:
 - `Account` model extends `BaseSaveAccountModel` with authentication fields and status validation
 - `Player` model extends `BaseSavePlayerModel` with game character data (account_id, name, job, level, exp)
 - `Guild` model extends `BaseSavePlayerModel` with guild management data (name, master, level, exp, skills, war stats)
-- `Download` model extends `BaseSaveModel` with file management (title, description, filename, file_path, version, is_published)
+- `Download` model extends `BaseSaveModel` with file management and Site relationship (provider, size, link, category, published, site_id)
+- `Site` model extends `BaseSaveModel` with website configuration (name, slug, levels, rates, social links, footer settings)
+- `Image` model extends `BaseSaveModel` with image management (name, path, type, alt_text, file_size)
+- `Pages` model extends `BaseSaveModel` with CMS functionality (slug, title, content, SEO fields)
 - `GMList` model extends `BaseSaveCommonModel` with admin authorization (account_id, authority_level)
 - All models inherit database-specific `.save()`, `.delete()`, `.filter()`, and `.query()` methods
+- **Automatic Timestamps**: Models extending `BaseSaveModel` automatically include `created_at` and `updated_at` fields
 
 **Authentication System**:
 - JWT-based authentication using `python-jose`
@@ -150,10 +155,12 @@ A comprehensive file/content management system with the following capabilities:
 
 **Public Endpoints:**
 - `GET /api/game/downloads` - List downloads with pagination, search, and filtering
-  - Query parameters: `page`, `per_page`, `category`, `provider`, `published_only`, `search`
+  - Query parameters: `page`, `per_page`, `category`, `provider`, `site_id`, `published_only`, `search`
   - Advanced search across provider, category, and link fields
-  - Category and provider filtering
+  - Category, provider, and site-based filtering
+  - Combined site+category filtering support
   - Published-only filtering option
+  - Eager loading of Site relationship data
 
 **Admin-Only Endpoints** (require GM/admin authorization):
 - `GET /api/game/downloads/{id}` - Get specific download details
@@ -165,12 +172,15 @@ A comprehensive file/content management system with the following capabilities:
 
 **Features:**
 - Full CRUD operations with validation
+- Site relationship management with foreign key validation
 - Publish/unpublish functionality  
 - Advanced search across provider, category, and link fields
-- Multiple filtering options (category, provider, published status)
+- Multiple filtering options (category, provider, site, published status)
+- Combined filtering (site + category)
 - Pagination with metadata (total, pages, navigation)
 - Admin-only management endpoints with GM authorization
-- Automatic timestamp tracking via BaseSaveModel
+- Automatic timestamp tracking via BaseSaveModel (`created_at`, `updated_at`)
+- Eager loading of Site data in all download responses
 
 ### Admin/GM Authorization System
 Role-based access control system for administrative features:
@@ -226,11 +236,34 @@ Extended account management with comprehensive user operations:
 - `skill_point`, `skill`, `win`, `draw`, `loss`
 - `ladder_point`, `gold`
 
-**Download Model** (BaseSaveModel):
-- `id` (PK), `provider`, `size` (DECIMAL), `link` (TEXT), `category`
+**Download Model** (BaseSaveModel + TimestampMixin):
+- `id` (PK), `provider`, `size` (STRING), `link` (TEXT), `category`
 - `published` (BOOLEAN) - publication status for content management
+- `site_id` (FK) - relationship to Site model with cascade delete
+- `created_at`, `updated_at` (auto-managed timestamps)
+- Relationship: `site` (many-to-one with Site)
 - Full content management with publish/unpublish functionality
-- Advanced search and filtering capabilities
+- Advanced search, filtering, and site-based organization
+
+**Site Model** (BaseSaveModel + TimestampMixin):
+- `id` (PK), `name`, `slug` (unique), `initial_level`, `max_level`
+- `rates`, `facebook_url`, `facebook_enable`, `forum_url`
+- `footer_info`, `footer_menu_enable`, `footer_info_enable`
+- `last_online`, `is_active`, `maintenance_mode`
+- `created_at`, `updated_at` (auto-managed timestamps)
+- Relationships: `downloads` (one-to-many), `images` (many-to-many), `footer_menu` (many-to-many with Pages)
+
+**Image Model** (BaseSaveModel + TimestampMixin):
+- `id` (PK), `name`, `image_path`, `image_type` (ENUM: logo/bg)
+- `alt_text`, `file_size`, `is_active`
+- `created_at`, `updated_at` (auto-managed timestamps)
+- Relationship: `sites` (many-to-many)
+
+**Pages Model** (BaseSaveModel + TimestampMixin):
+- `id` (PK), `slug`, `title`, `content`, `published`
+- `meta_description`, `meta_keywords` (SEO fields)
+- `created_at`, `updated_at` (auto-managed timestamps)
+- Relationship: `sites_footer` (many-to-many with Site)
 
 **GMList Model** (BaseSaveCommonModel):
 - `account_id` (PK), `authority_level`
@@ -291,7 +324,14 @@ docker-compose down -v
 **Recently Implemented:**
 - Complete account management system with registration, login, and profile management
 - Admin verification system with GM-level access control
-- Download management system with full CRUD operations
+- **Refactored Download API** with Site relationship integration:
+  - Site-based filtering and organization
+  - Combined site+category filtering
+  - Site existence validation in CRUD operations
+  - Eager loading of Site relationship data
+  - Updated schemas to include site_id and site information
+- **TimestampMixin Integration**: Automatic `created_at`/`updated_at` tracking for all BaseSaveModel entities
+- **Multi-Model CMS System**: Site, Image, and Pages models with many-to-many relationships
 - Advanced search and filtering capabilities for downloads
 - Player listing with pagination and level-based ordering
 - Guild management with comprehensive data display
@@ -321,9 +361,11 @@ docker-compose down -v
 - `app/models/`: SQLAlchemy models extending database-specific base classes
   - `account.py`: Account model for authentication
   - `player.py`: Player and Guild models for game data
-  - `application.py`: Download model for content management
+  - `application.py`: Download, Site, Image, and Pages models with relationships and TimestampMixin
   - `common.py`: GMList model for admin authorization
 - `app/schemas/`: Pydantic schemas for request/response validation
+  - `site.py`: Complete Site CRUD schemas
+  - `download.py`: Updated Download schemas with site relationship
 - `app/crud/`: CRUD operations abstraction layer
 
 ### Security Layer
@@ -340,10 +382,12 @@ docker-compose down -v
 
 ### When Working with Models
 - Always use the appropriate base class for each database
-- Use `BaseSaveModel` for new application features (downloads, etc.)
+- Use `BaseSaveModel` for new application features (downloads, sites, images, pages) - includes automatic timestamps
 - Use `BaseSaveAccountModel` for account-related operations
-- Use `BaseSavePlayerModel` for player and guild operations
+- Use `BaseSavePlayerModel` for player and guild operations  
 - Use `BaseSaveCommonModel` for administrative features
+- **TimestampMixin Behavior**: Models extending `BaseSaveModel` automatically get `created_at` (set on creation) and `updated_at` (updated on every save)
+- **Relationship Management**: When working with foreign keys, ensure parent entities exist before creating relationships
 
 ### When Adding New Endpoints
 - Follow the existing router pattern in `app/api/routes/`

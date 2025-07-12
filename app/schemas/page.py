@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 
 
@@ -9,19 +9,22 @@ class PageBase(BaseModel):
     content: str = Field(..., description="Contenido de la página")
     published: bool = Field(default=True, description="Indica si la página está publicada")
 
-    @validator('slug')
+    @field_validator('slug')
+    @classmethod
     def slug_must_not_be_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('El slug no puede estar vacío')
         return v.strip().lower().replace(' ', '-')
 
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def title_must_not_be_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('El título no puede estar vacío')
         return v.strip()
 
-    @validator('content')
+    @field_validator('content')
+    @classmethod
     def content_must_not_be_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('El contenido no puede estar vacío')
@@ -43,19 +46,22 @@ class PageUpdate(BaseModel):
     content: Optional[str] = Field(None, description="Contenido de la página")
     published: Optional[bool] = Field(None, description="Indica si la página está publicada")
 
-    @validator('slug')
+    @field_validator('slug')
+    @classmethod
     def slug_must_not_be_empty(cls, v):
         if v is not None and (not v or not v.strip()):
             raise ValueError('El slug no puede estar vacío')
         return v.strip().lower().replace(' ', '-') if v else v
 
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def title_must_not_be_empty(cls, v):
         if v is not None and (not v or not v.strip()):
             raise ValueError('El título no puede estar vacío')
         return v.strip() if v else v
 
-    @validator('content')
+    @field_validator('content')
+    @classmethod
     def content_must_not_be_empty(cls, v):
         if v is not None and (not v or not v.strip()):
             raise ValueError('El contenido no puede estar vacío')

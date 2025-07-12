@@ -1,8 +1,8 @@
 from typing import Optional, List, Tuple
-from decimal import Decimal
 from math import ceil
+from sqlalchemy.orm import joinedload
 # Local Imports
-from app.models.application import Download
+from app.models.application import Download, Site
 from app.schemas.download import DownloadCreate, DownloadUpdate
 
 
@@ -11,7 +11,7 @@ class CRUDDownload:
 
     def get(self, id: int) -> Optional[Download]:
         """Obtener una descarga por ID"""
-        return Download.filter(Download.id == id).first()
+        return Download.filter(Download.id == id).options(joinedload(Download.site)).first()
 
     def get_multi(self, skip: int = 0, limit: int = 100) -> List[Download]:
         """Obtener múltiples descargas con paginación básica"""
@@ -23,7 +23,7 @@ class CRUDDownload:
         total = query.count()
         
         offset = (page - 1) * per_page
-        downloads = query.offset(offset).limit(per_page).all()
+        downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
         
         return downloads, total
 
@@ -33,7 +33,7 @@ class CRUDDownload:
         total = query.count()
         
         offset = (page - 1) * per_page
-        downloads = query.offset(offset).limit(per_page).all()
+        downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
         
         return downloads, total
 
@@ -43,7 +43,7 @@ class CRUDDownload:
         total = query.count()
         
         offset = (page - 1) * per_page
-        downloads = query.offset(offset).limit(per_page).all()
+        downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
         
         return downloads, total
 
@@ -53,18 +53,24 @@ class CRUDDownload:
         total = query.count()
         
         offset = (page - 1) * per_page
-        downloads = query.offset(offset).limit(per_page).all()
+        downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
         
         return downloads, total
 
     def create(self, obj_in: DownloadCreate) -> Download:
         """Crear una nueva descarga"""
+        # Verificar que el sitio existe
+        site = Site.filter(Site.id == obj_in.site_id).first()
+        if not site:
+            raise ValueError(f"Site with id {obj_in.site_id} not found")
+            
         db_obj = Download(
             provider=obj_in.provider,
-            size=Decimal(str(obj_in.size)),
+            size=obj_in.size,
             link=obj_in.link,
             category=obj_in.category,
-            published=obj_in.published
+            published=obj_in.published,
+            site_id=obj_in.site_id
         )
         return db_obj.save()
 
@@ -72,9 +78,11 @@ class CRUDDownload:
         """Actualizar una descarga existente"""
         update_data = obj_in.model_dump(exclude_unset=True)
         
-        # Convertir size a Decimal si está presente
-        if "size" in update_data:
-            update_data["size"] = Decimal(str(update_data["size"]))
+        # Verificar que el sitio existe si se está actualizando
+        if "site_id" in update_data:
+            site = Site.filter(Site.id == update_data["site_id"]).first()
+            if not site:
+                raise ValueError(f"Site with id {update_data['site_id']} not found")
         
         for field, value in update_data.items():
             setattr(db_obj, field, value)
@@ -95,19 +103,26 @@ class CRUDDownload:
         db_obj.published = False
         return db_obj.save()
 
-    def get_by_size_range(self, min_size: float, max_size: float, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
-        """Obtener descargas por rango de tamaño con paginación"""
-        min_decimal = Decimal(str(min_size))
-        max_decimal = Decimal(str(max_size))
+    def get_by_site(self, site_id: int, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+        """Obtener descargas por sitio con paginación"""
+        query = Download.filter(Download.site_id == site_id)
+        total = query.count()
         
+        offset = (page - 1) * per_page
+        downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
+        
+        return downloads, total
+        
+    def get_by_site_and_category(self, site_id: int, category: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+        """Obtener descargas por sitio y categoría con paginación"""
         query = Download.filter(
-            Download.size >= min_decimal,
-            Download.size <= max_decimal
+            Download.site_id == site_id,
+            Download.category == category
         )
         total = query.count()
         
         offset = (page - 1) * per_page
-        downloads = query.offset(offset).limit(per_page).all()
+        downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
         
         return downloads, total
 
@@ -133,7 +148,7 @@ class CRUDDownload:
         total = search_query.count()
         
         offset = (page - 1) * per_page
-        downloads = search_query.offset(offset).limit(per_page).all()
+        downloads = search_query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
         
         return downloads, total
 

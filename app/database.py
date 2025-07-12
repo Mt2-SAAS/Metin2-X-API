@@ -1,8 +1,9 @@
 from typing import Any, Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session, Query
+from sqlalchemy.sql import func
 # Local Imports
 from .config import settings
 
@@ -63,6 +64,12 @@ def get_player_db() -> Generator[Session]:
         db_player.close()
 
 
+class TimestampMixin:
+    """Mixin para campos de timestamp automáticos"""
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+
+
 def get_base_save_model():
     """Obtener la sesión de base de datos para modelos que necesitan guardar datos"""
     Base = declarative_base()
@@ -75,7 +82,7 @@ def get_base_save_model():
     session_player = SessionLocalPlayer()
     session_common = SessionLocalCommon()
 
-    class BaseSaveModel(Base):
+    class BaseSaveModel(Base, TimestampMixin):
         """Clase base para modelos que necesitan guardar datos en la base de datos"""
         
         __abstract__ = True
@@ -197,6 +204,10 @@ def get_base_save_model():
         BaseSavePlayerModel,
         BaseSaveCommonModel
     )
+
+
+
+
 
 # Crear Base class and get session
 BaseSaveModel,\
