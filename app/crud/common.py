@@ -18,7 +18,8 @@ class CRUDGMList:
 
     def get_admin_level(self, account_login: str) -> str:
         gm_record = self.get_gm_by_account(account_login)
-        return gm_record.mAuthority if gm_record else AuthorityLevel.PLAYER.value
+        # if no GM record, return PLAYABLE level
+        return gm_record.mAuthority if gm_record else AuthorityLevel.PLAYABLE.value 
     
     def has_authority_level(self, account_login: str, required_level: AuthorityLevel) -> bool:
         """Verifica si el usuario tiene el nivel de autoridad requerido o superior"""

@@ -16,6 +16,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 class AuthorityLevel(Enum):
+    """Niveles de autoridad para el acceso a funcionalidades"""
+    PLAYABLE = "PLAYABLE"
+
+    # GM Levels
     PLAYER = "PLAYER"
     LOW_WIZARD = "LOW_WIZARD"
     HIGH_WIZARD = "HIGH_WIZARD"
@@ -27,11 +31,12 @@ class AuthorityLevel(Enum):
         """Obtiene el valor jerárquico del nivel"""
         # Jerarquía de niveles (mayor número = mayor autoridad)
         hierarchy_map = {
-            "PLAYER": 0,
-            "LOW_WIZARD": 1,
-            "HIGH_WIZARD": 2,
-            "GOD": 3,
-            "IMPLEMENTOR": 4
+            "PLAYABLE": 0,
+            "PLAYER": 1, # from here start GM levels, PLAYER is lower level
+            "LOW_WIZARD": 2,
+            "HIGH_WIZARD": 3,
+            "GOD": 4,
+            "IMPLEMENTOR": 5
         }
         return hierarchy_map.get(level, 0)
     

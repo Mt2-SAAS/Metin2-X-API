@@ -7,6 +7,7 @@ from app.api.deps import (
 )
 from app.models.player import Player, Guild
 from app.crud.download import get_download, CRUDDownload
+from app.crud.page import get_page, CRUDPage
 
 from app.schemas.player import (
     PaginatedGuildsResponse,
@@ -17,6 +18,12 @@ from app.schemas.download import (
     DownloadUpdate,
     DownloadResponse,
     PaginatedDownloadResponse
+)
+from app.schemas.page import (
+    PageCreate,
+    PageUpdate,
+    PageResponse,
+    PaginatedPageResponse
 )
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -232,4 +239,169 @@ async def delete_download(
         return {"message": "Descarga eliminada exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al eliminar descarga: {str(e)}")
+
+
+# Page endpoints
+@router.get("/pages", response_model=PaginatedPageResponse)
+async def list_pages(
+    page: int = Query(1, ge=1, description="Número de página"),
+    per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
+    published_only: bool = Query(False, description="Solo mostrar páginas publicadas"),
+    search: str = Query(None, description="Buscar en título, slug o contenido"),
+    crud: CRUDPage = Depends(get_page)
+):
+    """Listar páginas con paginación y filtros opcionales"""
+    try:
+        # Aplicar filtros y obtener datos paginados
+        if search:
+            pages, total = crud.search(search, page=page, per_page=per_page)
+        elif published_only:
+            pages, total = crud.get_published(page=page, per_page=per_page)
+        else:
+            pages, total = crud.get_paginated(page=page, per_page=per_page)
+        
+        # Calcular metadatos de paginación
+        total_pages = ceil(total / per_page) if total > 0 else 1
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return PaginatedPageResponse(
+            response=pages,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener páginas: {str(e)}")
+
+
+@router.get("/pages/slug/{slug}", response_model=PageResponse)
+async def get_page_by_slug(
+    slug: str,
+    crud: CRUDPage = Depends(get_page)
+):
+    """Obtener una página por slug"""
+    page = crud.get_by_slug(slug)
+    if not page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    
+    # Si la página no está publicada, solo permite acceso a admins
+    if not page.published:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    
+    return page
+
+
+@router.get("/pages/{page_id}", response_model=PageResponse)
+async def get_page_by_id(
+    page_id: int,
+    crud: CRUDPage = Depends(get_page)
+):
+    """Obtener una página por ID (solo admins)"""
+    page = crud.get(page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    return page
+
+
+@router.post("/pages", response_model=PageResponse)
+async def create_page(
+    _: require_gm_level_implementor,
+    page: PageCreate,
+    crud: CRUDPage = Depends(get_page)
+):
+    """Crear una nueva página"""
+    try:
+        # Verificar que el slug no exista
+        if crud.slug_exists(page.slug):
+            raise HTTPException(status_code=400, detail="Ya existe una página con este slug")
+        
+        new_page = crud.create(obj_in=page)
+        return new_page
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al crear página: {str(e)}")
+
+
+@router.put("/pages/{page_id}", response_model=PageResponse)
+async def update_page(
+    _: require_gm_level_implementor,
+    page_id: int,
+    page_update: PageUpdate,
+    crud: CRUDPage = Depends(get_page)
+):
+    """Actualizar una página existente"""
+    db_page = crud.get(page_id)
+    if not db_page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    
+    try:
+        # Si se está actualizando el slug, verificar que no exista
+        if page_update.slug and crud.slug_exists(page_update.slug, exclude_id=page_id):
+            raise HTTPException(status_code=400, detail="Ya existe una página con este slug")
+        
+        updated_page = crud.update(db_obj=db_page, obj_in=page_update)
+        return updated_page
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al actualizar página: {str(e)}")
+
+
+@router.patch("/pages/{page_id}/publish", response_model=PageResponse)
+async def publish_page(
+    _: require_gm_level_implementor,
+    page_id: int,
+    crud: CRUDPage = Depends(get_page)
+):
+    """Publicar una página"""
+    db_page = crud.get(page_id)
+    if not db_page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    
+    try:
+        published_page = crud.publish(db_page)
+        return published_page
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al publicar página: {str(e)}")
+
+
+@router.patch("/pages/{page_id}/unpublish", response_model=PageResponse)
+async def unpublish_page(
+    _: require_gm_level_implementor,
+    page_id: int,
+    crud: CRUDPage = Depends(get_page)
+):
+    """Despublicar una página"""
+    db_page = crud.get(page_id)
+    if not db_page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    
+    try:
+        unpublished_page = crud.unpublish(db_page)
+        return unpublished_page
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al despublicar página: {str(e)}")
+
+
+@router.delete("/pages/{page_id}")
+async def delete_page(
+    _: require_gm_level_implementor,
+    page_id: int,
+    crud: CRUDPage = Depends(get_page)
+):
+    """Eliminar una página"""
+    db_page = crud.get(page_id)
+    if not db_page:
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    
+    try:
+        crud.delete(db_page)
+        return {"message": "Página eliminada exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al eliminar página: {str(e)}")
 

@@ -21,3 +21,17 @@ class Download(BaseSaveModel):
 
     def __repr__(self):
         return f"<Download(id={self.id}, provider='{self.provider}', category='{self.category}')>"
+
+
+class Pages(BaseSaveModel):
+    __tablename__ = 'pages'
+
+    __table_args__ = {
+        'comment': 'Tabla de paginas del juego',
+    }
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    slug = Column(String(100), nullable=False)
+    title = Column(String(100), nullable=False)
+    content = Column(Text, nullable=False)
+    published = Column(Boolean, default=True, nullable=False)
