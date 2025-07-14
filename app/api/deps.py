@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.crud.account import get_account, CRUDAccount
 from app.crud.common import get_common
-from app.models.account import Account
+from app.models.account import Account, StatusType
 
 from app.database  import get_acount_db, get_player_db, get_db
 from app.core.security import AuthorityLevel
@@ -41,7 +41,7 @@ def get_current_account(
 def get_current_active_account(current_account: Account = Depends(get_current_account)) -> Account:
     """ Verifica que la cuenta esté activa.
     """
-    if current_account.status != "OK":
+    if current_account.status != StatusType.OK:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cuenta inactiva")
     return current_account
 

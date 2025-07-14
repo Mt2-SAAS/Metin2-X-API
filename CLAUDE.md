@@ -75,7 +75,7 @@ The application implements a sophisticated four-database architecture:
 - `Guild` model extends `BaseSavePlayerModel` with guild management data (name, master, level, exp, skills, war stats)
 - `Download` model extends `BaseSaveModel` with file management and Site relationship (provider, size, link, category, published, site_id)
 - `Site` model extends `BaseSaveModel` with website configuration (name, slug, levels, rates, social links, footer settings)
-- `Image` model extends `BaseSaveModel` with image management (name, path, type, alt_text, file_size)
+- `Image` model extends `BaseSaveModel` with comprehensive file management (filename, original_filename, file_path, image_type, file_size, site relationship)
 - `Pages` model extends `BaseSaveModel` with CMS functionality (slug, title, content, SEO fields)
 - `GMList` model extends `BaseSaveCommonModel` with admin authorization (account_id, authority_level)
 - All models inherit database-specific `.save()`, `.delete()`, `.filter()`, and `.query()` methods
@@ -142,10 +142,13 @@ Configure via environment variables:
 - `PUT /me/password` - Update account password with old password verification
 - `GET /me/players` - Get all players for logged-in account
 
-**Game Features** (`/api/game/`):
+**Game Features** (`/api/v1/game/`):
 - `GET /players` - List all players with pagination (ordered by level)
 - `GET /guilds` - List all guilds with pagination (ordered by level)
-- Download management system with full CRUD operations and admin protection
+- **Download Management System** - Full CRUD operations with admin protection
+- **Image Management System** - Complete file upload and management with physical storage
+- **Site Management System** - Website configuration and administration
+- **Page Management System** - CMS functionality for site content
 - All admin-only endpoints require GM/admin authorization
 
 ## New Features
@@ -181,6 +184,42 @@ A comprehensive file/content management system with the following capabilities:
 - Admin-only management endpoints with GM authorization
 - Automatic timestamp tracking via BaseSaveModel (`created_at`, `updated_at`)
 - Eager loading of Site data in all download responses
+
+### Image Management System
+A comprehensive image upload and management system with physical file storage:
+
+**Public Endpoints:**
+- `GET /api/v1/game/images` - List images with pagination, search, and filtering
+  - Query parameters: `page`, `per_page`, `site_id`, `image_type`, `search`
+  - Advanced search across filename, original_filename, and file_path
+  - Site and image type filtering
+  - Combined site+type filtering support
+  - Eager loading of Site relationship data
+- `GET /api/v1/game/images/site/{site_id}` - Get images by specific site
+
+**Admin-Only Endpoints** (require GM/admin authorization):
+- `GET /api/v1/game/images/{id}` - Get specific image details
+- `POST /api/v1/game/images/upload` - Upload new image with file storage
+- `PUT /api/v1/game/images/{id}` - Update image metadata
+- `POST /api/v1/game/images/{id}/replace` - Replace image file while keeping metadata
+- `DELETE /api/v1/game/images/{id}` - Delete image and its physical file
+
+**Features:**
+- **Physical File Storage**: Files saved to `app/static/uploads/` with UUID-based naming
+- **File Validation**: Type validation (JPEG, PNG, GIF, WebP) and size limits (5MB max)
+- **Unique Filename Generation**: UUID-based naming prevents conflicts
+- **Original Filename Preservation**: Maintains original filename for reference
+- **File Replacement**: Replace image files while preserving metadata and relationships
+- **Automatic Cleanup**: Physical file deletion when removing from database
+- **Static File Serving**: Images accessible via `/static/uploads/{filename}` URL
+- **Site Integration**: Images belong to specific sites with foreign key relationships
+- **Image Type Classification**: Support for logo and background image types
+- **Advanced Search**: Search across filename, original filename, and file paths
+- **Multiple Filtering**: Filter by site, image type, or combined filters
+- **Pagination Support**: Full pagination with metadata
+- **Admin Authorization**: All management operations require GM/admin access
+- **Automatic Timestamps**: Created/updated tracking via BaseSaveModel
+- **Comprehensive Error Handling**: Detailed error messages for validation failures
 
 ### Admin/GM Authorization System
 Role-based access control system for administrative features:
@@ -251,13 +290,16 @@ Extended account management with comprehensive user operations:
 - `footer_info`, `footer_menu_enable`, `footer_info_enable`
 - `last_online`, `is_active`, `maintenance_mode`
 - `created_at`, `updated_at` (auto-managed timestamps)
-- Relationships: `downloads` (one-to-many), `images` (many-to-many), `footer_menu` (many-to-many with Pages)
+- Relationships: `downloads` (one-to-many), `images` (one-to-many), `footer_menu` (one-to-many with Pages)
 
 **Image Model** (BaseSaveModel + TimestampMixin):
-- `id` (PK), `name`, `image_path`, `image_type` (ENUM: logo/bg)
-- `alt_text`, `file_size`, `is_active`
+- `id` (PK), `filename` (unique UUID-based), `original_filename` (user's original name)
+- `file_path` (full path to stored file), `image_type` (ENUM: logo/bg)
+- `file_size` (bytes), `site_id` (FK to Site)
 - `created_at`, `updated_at` (auto-managed timestamps)
-- Relationship: `sites` (many-to-many)
+- Relationship: `site` (many-to-one with Site)
+- Physical file storage in `app/static/uploads/` directory
+- Accessible via `/static/uploads/{filename}` URL pattern
 
 **Pages Model** (BaseSaveModel + TimestampMixin):
 - `id` (PK), `slug`, `title`, `content`, `published`
@@ -311,11 +353,45 @@ docker-compose down
 docker-compose down -v
 ```
 
+## File Upload and Storage System
+
+### Configuration
+- **Upload Directory**: `app/static/uploads/` (automatically created)
+- **Static File Serving**: Files accessible at `/static/uploads/{filename}`
+- **Supported Formats**: JPEG, PNG, GIF, WebP
+- **File Size Limit**: 5MB maximum
+- **Naming Strategy**: UUID-based unique filenames with original extension
+
+### File Management Utilities (`app/utils/utils.py`)
+- **`validate_image(file)`**: Validates file type and size
+- **`save_upload_file(file)`**: Saves file to disk with unique naming
+  - Returns: `(unique_filename, web_path, file_size)`
+  - Generates UUID-based filename
+  - Returns web-accessible path for frontend use
+
+### Storage Structure
+```
+app/
+├── static/
+│   └── uploads/
+│       ├── {uuid1}.jpg
+│       ├── {uuid2}.png
+│       └── ...
+```
+
+### Access Patterns
+- **Database Storage**: Filename, original name, file path, and metadata
+- **File Access**: `/static/uploads/{filename}` via HTTP
+- **Admin Management**: Full CRUD operations with file cleanup
+- **Automatic Cleanup**: Physical files deleted when database records are removed
+
 ## Development Notes
 
 - The application creates all tables automatically on startup via `BaseSaveModel.metadata.create_all(bind=engine)`
 - Echo is enabled on all database engines for development (shows SQL queries)
 - CORS is configured for `localhost:3000` and `localhost:8080`
+- Static file serving configured at `/static` endpoint for uploaded files
+- Upload directory automatically created on application startup
 - Docker setup includes proper service orchestration with health checks
 - Environment variables can be configured via `.env` file for Docker deployment
 
@@ -331,7 +407,8 @@ docker-compose down -v
   - Eager loading of Site relationship data
   - Updated schemas to include site_id and site information
 - **TimestampMixin Integration**: Automatic `created_at`/`updated_at` tracking for all BaseSaveModel entities
-- **Multi-Model CMS System**: Site, Image, and Pages models with many-to-many relationships
+- **Complete Image Management System**: File upload, storage, validation, and serving with admin controls
+- **Multi-Model CMS System**: Site, Image, and Pages models with proper relationships
 - Advanced search and filtering capabilities for downloads
 - Player listing with pagination and level-based ordering
 - Guild management with comprehensive data display
@@ -348,9 +425,9 @@ docker-compose down -v
 ## File Structure and Key Components
 
 ### Core Application Files
-- `app/main.py`: FastAPI application entry point with router registration
-- `app/config.py`: Configuration management using python-decouple
-- `app/database.py`: Multi-database setup with three engines and session makers
+- `app/main.py`: FastAPI application entry point with router registration and static file serving
+- `app/config.py`: Configuration management using python-decouple with upload directory setup
+- `app/database.py`: Multi-database setup with four engines and session makers
 
 ### API Layer
 - `app/api/deps.py`: Dependency injection for database sessions and authentication
@@ -366,7 +443,12 @@ docker-compose down -v
 - `app/schemas/`: Pydantic schemas for request/response validation
   - `site.py`: Complete Site CRUD schemas
   - `download.py`: Updated Download schemas with site relationship
+  - `image.py`: Complete Image schemas with file upload support
+  - `page.py`: Page CMS schemas
 - `app/crud/`: CRUD operations abstraction layer
+  - `image.py`: Image CRUD with file management operations
+- `app/utils/`: Utility functions
+  - `utils.py`: File upload validation and storage utilities
 
 ### Security Layer
 - `app/core/security.py`: JWT token creation and validation
