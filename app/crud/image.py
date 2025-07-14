@@ -18,7 +18,7 @@ class CRUDImage:
                 .options(joinedload(Image.site))
                 .first())
     
-    def get_by_filename(self, filename: str, site_id: Optional[int] = None) -> Optional[Image]:
+    def get_by_filename(self, filename: str, site_id: Optional[str] = None) -> Optional[Image]:
         """Get image by filename, optionally filtered by site"""
         query = Image.filter(Image.filename == filename)
         if site_id:
@@ -35,7 +35,7 @@ class CRUDImage:
         
         return images, total
     
-    def get_by_site(self, site_id: int, page: int = 1, per_page: int = 20) -> Tuple[List[Image], int]:
+    def get_by_site(self, site_id: str, page: int = 1, per_page: int = 20) -> Tuple[List[Image], int]:
         """Get images filtered by site"""
         query = (Image.filter(Image.site_id == site_id)
                 .order_by(Image.created_at.desc()))
@@ -67,7 +67,7 @@ class CRUDImage:
         
         return images, total
     
-    def get_by_site_and_type(self, site_id: int, image_type: str, page: int = 1, per_page: int = 20) -> Tuple[List[Image], int]:
+    def get_by_site_and_type(self, site_id: str, image_type: str, page: int = 1, per_page: int = 20) -> Tuple[List[Image], int]:
         """Get images filtered by site and type"""
         query = (Image.filter(and_(
                     Image.site_id == site_id,
@@ -159,7 +159,7 @@ class CRUDImage:
         # Then delete from database
         db_obj.delete()
     
-    def filename_exists(self, filename: str, site_id: int, exclude_id: Optional[int] = None) -> bool:
+    def filename_exists(self, filename: str, site_id: str, exclude_id: Optional[int] = None) -> bool:
         """Check if image filename exists for a specific site"""
         query = Image.filter(and_(
             Image.filename == filename,

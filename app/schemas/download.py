@@ -11,7 +11,7 @@ class DownloadBase(BaseModel):
     link: str = Field(..., description="URL del enlace de descarga")
     category: str = Field(..., max_length=50, description="Categoría de la descarga")
     published: bool = Field(default=False, description="Indica si la descarga está publicada")
-    site_id: int = Field(..., description="ID del sitio al que pertenece la descarga")
+    site_id: str = Field(..., description="ID del sitio al que pertenece la descarga")
 
     @field_validator('provider')
     @classmethod
@@ -50,7 +50,7 @@ class DownloadUpdate(BaseModel):
     link: Optional[str] = Field(None, description="URL del enlace de descarga")
     category: Optional[str] = Field(None, max_length=50, description="Categoría de la descarga")
     published: Optional[bool] = Field(None, description="Indica si la descarga está publicada")
-    site_id: Optional[int] = Field(None, description="ID del sitio al que pertenece la descarga")
+    site_id: Optional[str] = Field(None, description="ID del sitio al que pertenece la descarga")
 
     @field_validator('provider')
     @classmethod
@@ -100,7 +100,7 @@ class DownloadResponse(BaseModel):
     link: str
     category: str
     published: bool
-    site_id: int
+    site_id: str
     # site: Optional[SiteResponse] = None
 
     class Config:

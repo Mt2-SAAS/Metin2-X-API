@@ -119,5 +119,5 @@ async def update_password_account_me(
 async def get_player(
     current_account: current_account_dependency,
 ):
-    players = Player.filter(Player.account_id==current_account.id).all()
+    players = Player.query(refresh=True).filter(Player.account_id==current_account.id).all()
     return PlayerUserResponse(players=players)

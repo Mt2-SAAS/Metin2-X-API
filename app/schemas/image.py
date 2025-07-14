@@ -19,7 +19,7 @@ class ImageBase(BaseModel):
     file_path: str = Field(..., max_length=500, description="Ruta completa del archivo")
     image_type: ImageType = Field(..., description="Tipo de imagen (logo/bg)")
     file_size: Optional[int] = Field(None, description="Tamaño del archivo en bytes")
-    site_id: int = Field(..., description="ID del sitio al que pertenece la imagen")
+    site_id: str = Field(..., description="ID del sitio al que pertenece la imagen")
 
     @field_validator('filename')
     @classmethod
@@ -53,7 +53,7 @@ class ImageCreate(BaseModel):
     file_path: str = Field(..., max_length=500, description="Ruta completa del archivo")
     image_type: ImageType = Field(..., description="Tipo de imagen (logo/bg)")
     file_size: int = Field(..., description="Tamaño del archivo en bytes")
-    site_id: int = Field(..., description="ID del sitio al que pertenece la imagen")
+    site_id: str = Field(..., description="ID del sitio al que pertenece la imagen")
 
     class Config:
         from_attributes = True
@@ -63,7 +63,7 @@ class ImageUpdate(BaseModel):
     """Schema for updating image metadata (not for file replacement)"""
     original_filename: Optional[str] = Field(None, max_length=255, description="Nombre original del archivo")
     image_type: Optional[ImageType] = Field(None, description="Tipo de imagen (logo/bg)")
-    site_id: Optional[int] = Field(None, description="ID del sitio al que pertenece la imagen")
+    site_id: Optional[str] = Field(None, description="ID del sitio al que pertenece la imagen")
 
     @field_validator('original_filename')
     @classmethod
@@ -76,7 +76,7 @@ class ImageUpdate(BaseModel):
 class ImageUploadRequest(BaseModel):
     """Schema for image upload request"""
     image_type: ImageType = Field(..., description="Tipo de imagen (logo/bg)")
-    site_id: int = Field(..., description="ID del sitio al que pertenece la imagen")
+    site_id: str = Field(..., description="ID del sitio al que pertenece la imagen")
 
     class Config:
         from_attributes = True
@@ -103,7 +103,7 @@ class ImageResponse(BaseModel):
     file_path: str
     image_type: ImageType
     file_size: Optional[int] = None
-    site_id: int
+    site_id: str
 
     class Config:
         from_attributes = True

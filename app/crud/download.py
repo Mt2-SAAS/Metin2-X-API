@@ -103,7 +103,7 @@ class CRUDDownload:
         db_obj.published = False
         return db_obj.save()
 
-    def get_by_site(self, site_id: int, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+    def get_by_site(self, site_id: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
         """Obtener descargas por sitio con paginación"""
         query = Download.filter(Download.site_id == site_id)
         total = query.count()
@@ -113,7 +113,7 @@ class CRUDDownload:
         
         return downloads, total
         
-    def get_by_site_and_category(self, site_id: int, category: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+    def get_by_site_and_category(self, site_id: str, category: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
         """Obtener descargas por sitio y categoría con paginación"""
         query = Download.filter(
             Download.site_id == site_id,

@@ -107,7 +107,7 @@ class SiteUpdate(BaseModel):
 
 class SiteResponseDetailed(BaseModel):
     """Response schema for site operations"""
-    id: int
+    id: str
     name: str
     slug: str
     initial_level: str
@@ -133,7 +133,7 @@ class SiteResponseDetailed(BaseModel):
 
 class SiteResponse(BaseModel):
     """Response schema for site operations"""
-    id: int
+    id: str
     name: str
     slug: str
     initial_level: str
@@ -155,7 +155,7 @@ class SiteResponse(BaseModel):
 
 class Site(SiteBase):
     """Complete site schema including ID"""
-    id: int = Field(..., description="ID único del sitio")
+    id: str = Field(..., description="ID único del sitio")
 
     class Config:
         from_attributes = True

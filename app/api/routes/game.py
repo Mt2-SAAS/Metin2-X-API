@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Query, HTTPException, Depends, UploadFile, File
 from math import ceil
+from datetime import datetime, timedelta
 # Local Imports
 from app.api.deps import (
     require_gm_level_implementor
 )
 from app.models.player import Player, Guild
+from app.models.account import Account
 from app.crud.download import get_download, CRUDDownload
 from app.crud.page import get_page, CRUDPage
 from app.crud.site import get_site, CRUDSite
@@ -116,7 +118,7 @@ async def list_downloads(
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     category: str = Query(None, description="Filtrar por categoría"),
     provider: str = Query(None, description="Filtrar por proveedor"),
-    site_id: int = Query(None, description="Filtrar por sitio"),
+    site_id: str = Query(None, description="Filtrar por sitio"),
     published_only: bool = Query(False, description="Solo mostrar descargas publicadas"),
     search: str = Query(None, description="Buscar en provider, category o link"),
     crud: CRUDDownload = Depends(get_download)
@@ -261,9 +263,43 @@ async def delete_download(
         raise HTTPException(status_code=500, detail=f"Error al eliminar descarga: {str(e)}")
 
 
+@router.get("/downloads/site/{site_id}", response_model=PaginatedDownloadResponse)
+async def get_downloads_by_site(
+    site_id: str,
+    page: int = Query(1, ge=1, description="Número de página"),
+    per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
+    category: str = Query(None, description="Filtrar por categoría"),
+    crud: CRUDDownload = Depends(get_download)
+):
+    """Obtener descargas de un sitio específico"""
+    try:
+        if category:
+            downloads, total = crud.get_by_site_and_category(site_id, category, page=page, per_page=per_page)
+        else:
+            downloads, total = crud.get_by_site(site_id, page=page, per_page=per_page)
+        
+        # Calcular metadatos de paginación
+        total_pages = ceil(total / per_page) if total > 0 else 1
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return PaginatedDownloadResponse(
+            response=downloads,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener descargas del sitio: {str(e)}")
+
+
 # Page endpoints
 @router.get("/pages", response_model=PaginatedPageResponse)
 async def list_pages(
+    _: require_gm_level_implementor,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     published_only: bool = Query(False, description="Solo mostrar páginas publicadas"),
@@ -426,9 +462,43 @@ async def delete_page(
         raise HTTPException(status_code=500, detail=f"Error al eliminar página: {str(e)}")
 
 
+@router.get("/pages/site/{site_id}", response_model=PaginatedPageResponse)
+async def get_pages_by_site(
+    site_id: str,
+    page: int = Query(1, ge=1, description="Número de página"),
+    per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
+    published_only: bool = Query(False, description="Solo mostrar páginas publicadas"),
+    crud: CRUDPage = Depends(get_page)
+):
+    """Obtener páginas de un sitio específico"""
+    try:
+        if published_only:
+            pages, total = crud.get_by_site_and_published(site_id, published=True, page=page, per_page=per_page)
+        else:
+            pages, total = crud.get_by_site(site_id, page=page, per_page=per_page)
+        
+        # Calcular metadatos de paginación
+        total_pages = ceil(total / per_page) if total > 0 else 1
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return PaginatedPageResponse(
+            response=pages,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener páginas del sitio: {str(e)}")
+
+
 # Site endpoints
 @router.get("/sites", response_model=PaginatedSiteResponse)
 async def list_sites(
+    _: require_gm_level_implementor,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     active_only: bool = Query(False, description="Solo mostrar sitios activos"),
@@ -486,7 +556,7 @@ async def get_site_by_slug(
 @router.get("/sites/{site_id}", response_model=SiteResponseDetailed)
 async def get_site_by_id(
     _: require_gm_level_implementor,
-    site_id: int,
+    site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
     """Obtener un sitio por ID (solo admins)"""
@@ -515,7 +585,7 @@ async def create_site(
 @router.put("/sites/{site_id}", response_model=SiteResponse)
 async def update_site(
     _: require_gm_level_implementor,
-    site_id: int,
+    site_id: str,
     site_update: SiteUpdate,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -536,7 +606,7 @@ async def update_site(
 @router.patch("/sites/{site_id}/activate", response_model=SiteResponse)
 async def activate_site(
     _: require_gm_level_implementor,
-    site_id: int,
+    site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
     """Activar un sitio"""
@@ -554,7 +624,7 @@ async def activate_site(
 @router.patch("/sites/{site_id}/deactivate", response_model=SiteResponse)
 async def deactivate_site(
     _: require_gm_level_implementor,
-    site_id: int,
+    site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
     """Desactivar un sitio"""
@@ -572,7 +642,7 @@ async def deactivate_site(
 @router.patch("/sites/{site_id}/maintenance/enable", response_model=SiteResponse)
 async def enable_maintenance_mode(
     _: require_gm_level_implementor,
-    site_id: int,
+    site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
     """Habilitar modo mantenimiento"""
@@ -590,7 +660,7 @@ async def enable_maintenance_mode(
 @router.patch("/sites/{site_id}/maintenance/disable", response_model=SiteResponse)
 async def disable_maintenance_mode(
     _: require_gm_level_implementor,
-    site_id: int,
+    site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
     """Deshabilitar modo mantenimiento"""
@@ -608,7 +678,7 @@ async def disable_maintenance_mode(
 @router.delete("/sites/{site_id}")
 async def delete_site(
     _: require_gm_level_implementor,
-    site_id: int,
+    site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
     """Eliminar un sitio"""
@@ -623,32 +693,46 @@ async def delete_site(
         raise HTTPException(status_code=500, detail=f"Error al eliminar sitio: {str(e)}")
 
 
-@router.get("/sites/{site_id}/stats")
+@router.get("/sites/{site_slug}/stats")
 async def get_site_stats(
-    _: require_gm_level_implementor,
-    site_id: int,
+    site_slug: str,
     crud: CRUDSite = Depends(get_site)
 ):
     """Obtener estadísticas de un sitio"""
-    db_site = crud.get(site_id)
+    db_site = crud.get_by_slug(site_slug)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
     
     try:
-        from app.crud.download import get_download
+        # from app.crud.download import get_download
         download_crud = get_download()
-        
+        # Total Accounts
+        total_accounts = Account.query(refresh=True).count()
+        total_players = Player.query(refresh=True).count()
+
+        # usando funciones para calcular jugadores en línea
+        time_ago_5_minutes = datetime.now() - timedelta(minutes=5)
+        time_ago_24_hours = datetime.now() - timedelta(hours=24)
+
+        # Player online
+        online_players_5_minutes = Player.query(refresh=True).filter(Player.last_play > time_ago_5_minutes).count()
+        online_players_24_hours = Player.query(refresh=True).filter(Player.last_play > time_ago_24_hours).count()
+
         # Contar descargas del sitio
-        downloads_list, downloads_total = download_crud.get_by_site(site_id, page=1, per_page=1000)
+        downloads_list, downloads_total = download_crud.get_by_site(db_site.id, page=1, per_page=1000)
         downloads_published = len([d for d in downloads_list if d.published])
         
         return {
-            "site_id": site_id,
+            "site_id": db_site.id,
             "site_name": db_site.name,
             "downloads_total": downloads_total,
             "downloads_published": downloads_published,
             "is_active": db_site.is_active,
             "maintenance_mode": db_site.maintenance_mode,
+            "online_players_5_minutes": online_players_5_minutes,
+            "online_player_24_hours": online_players_24_hours,
+            "total_players": total_players,
+            "total_accounts": total_accounts,
             "created_at": db_site.created_at,
             "updated_at": db_site.updated_at
         }
@@ -659,9 +743,10 @@ async def get_site_stats(
 # Image endpoints
 @router.get("/images", response_model=PaginatedImageResponse)
 async def list_images(
+    _: require_gm_level_implementor,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
-    site_id: int = Query(None, description="Filtrar por sitio"),
+    site_id: str = Query(None, description="Filtrar por sitio"),
     image_type: ImageType = Query(None, description="Filtrar por tipo de imagen"),
     search: str = Query(None, description="Buscar en filename, original_filename o file_path"),
     crud: CRUDImage = Depends(get_image)
@@ -716,7 +801,7 @@ async def upload_image(
     _: require_gm_level_implementor,
     file: UploadFile = File(...),
     image_type: ImageType = Query(..., description="Tipo de imagen (logo/bg)"),
-    site_id: int = Query(..., description="ID del sitio al que pertenece la imagen"),
+    site_id: str = Query(..., description="ID del sitio al que pertenece la imagen"),
     crud: CRUDImage = Depends(get_image)
 ):
     """Subir una nueva imagen"""
@@ -830,7 +915,7 @@ async def delete_image(
 
 @router.get("/images/site/{site_id}", response_model=PaginatedImageResponse)
 async def get_images_by_site(
-    site_id: int,
+    site_id: str,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     image_type: ImageType = Query(None, description="Filtrar por tipo de imagen"),

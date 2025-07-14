@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, SmallInteger, Text
+from sqlalchemy import Column, Integer, String, SmallInteger, Text, DateTime
 from sqlalchemy.orm import validates
 # Local Imports
 from app.database import BaseSavePlayerModel
@@ -13,6 +13,7 @@ class Player(BaseSavePlayerModel):
     job = Column(Integer)  # Equivalente a PositiveIntegerField
     level = Column(Integer)  # Equivalente a PositiveIntegerField
     exp = Column(Integer)  # Equivalente a IntegerField
+    last_play = Column(DateTime)  # Campo de fecha y hora del último juego
     
     def __repr__(self):
         return f"<Player(id={self.account_id}, name='{self.name}')>"

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 
 class PlayerResponse(BaseModel):
@@ -12,8 +13,20 @@ class PlayerResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class PlayerDetailResponse(BaseModel):
+    account_id: int
+    name: str
+    job: int
+    level: int
+    exp: int
+    last_play: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
 class PlayerUserResponse(BaseModel):
-    players: List[PlayerResponse]
+    players: List[PlayerDetailResponse]
 
 class PaginatedPlayersResponse(BaseModel):
     response: List[PlayerResponse]

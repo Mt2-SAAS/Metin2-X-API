@@ -1,5 +1,7 @@
 from enum import Enum as PyEnum
+import uuid
 from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, Index, Enum
+from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
 # Local Imports
 from app.database import BaseSaveModel
@@ -27,7 +29,7 @@ class Download(BaseSaveModel):
     category = Column(String(50), nullable=False, comment='Categoría de la descarga (ej: cliente, parches, herramientas)')
 
     # Relación con Site (muchas descargas pueden pertenecer a un sitio)
-    site_id = Column(Integer, ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
+    site_id = Column(CHAR(36), ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
     site = relationship("Site", back_populates="downloads")
 
     def __str__(self):
@@ -52,7 +54,7 @@ class Image(BaseSaveModel):
     file_size = Column(Integer)  # Tamaño del archivo en bytes
 
     # Relaciones
-    site_id = Column(Integer, ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
+    site_id = Column(CHAR(36), ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
     site = relationship("Site", back_populates="images")
     
     def __str__(self):
@@ -78,7 +80,7 @@ class Pages(BaseSaveModel):
     meta_description = Column(String(160))  # Para SEO
     meta_keywords = Column(String(255))  # Para SEO
 
-    site_id = Column(Integer, ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
+    site_id = Column(CHAR(36), ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
     site = relationship("Site", back_populates="footer_menu")
 
     def __str__(self):
@@ -91,7 +93,7 @@ class Pages(BaseSaveModel):
 class Site(BaseSaveModel):
     __tablename__ = 'sites'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False, index=True)
     slug = Column(String(100), nullable=False, unique=True, index=True)
     

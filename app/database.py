@@ -1,4 +1,4 @@
-from typing import Any, Generator
+from typing import Generator
 from sqlalchemy import create_engine, Column, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -62,6 +62,15 @@ def get_player_db() -> Generator[Session]:
         yield db_player
     finally:
         db_player.close()
+
+
+def get_common_db() -> Generator[Session]:
+    """Dependency para obtener sesión de base de datos account"""
+    db_account = SessionLocalCommon()
+    try:
+        yield db_account
+    finally:
+        db_account.close()
 
 
 class TimestampMixin:
@@ -134,10 +143,14 @@ def get_base_save_model():
             return session_account.query(cls).filter(*args, **kwargs)
         
         @classmethod
-        def query(cls) -> Query:
+        def query(cls, refresh=False) -> Query:
             """Realizar una consulta a la base de datos
             Y devuelve una instancia de query para el modelo
+            Este metodo permite refrescar la sesión si es necesario
+            Esto es porque algunos datos son creados por fuera de la sesión y no estan en el cache
             """
+            if refresh:
+                session_player.expire_all()
             return session_account.query(cls)
     
     class BaseSavePlayerModel(BasePlayer):
@@ -163,10 +176,14 @@ def get_base_save_model():
             return session_player.query(cls).filter(*args, **kwargs)
         
         @classmethod
-        def query(cls) -> Query:
+        def query(cls, refresh=False) -> Query:
             """Realizar una consulta a la base de datos
             Y devuelve una instancia de query para el modelo
+            Este metodo permite refrescar la sesión si es necesario
+            Esto es porque algunos datos son creados por fuera de la sesión y no estan en el cache
             """
+            if refresh:
+                session_player.expire_all()
             return session_player.query(cls)
 
     class BaseSaveCommonModel(BaseCommon):
@@ -192,10 +209,14 @@ def get_base_save_model():
             return session_common.query(cls).filter(*args, **kwargs)
         
         @classmethod
-        def query(cls) -> Query:
+        def query(cls, refresh=False) -> Query:
             """Realizar una consulta a la base de datos
             Y devuelve una instancia de query para el modelo
+            Este metodo permite refrescar la sesión si es necesario
+            Esto es porque algunos datos son creados por fuera de la sesión y no estan en el cache
             """
+            if refresh:
+                session_player.expire_all()
             return session_common.query(cls)
 
     return (

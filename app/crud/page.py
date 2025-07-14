@@ -95,6 +95,29 @@ class CRUDPage:
         
         return pages, total
 
+    def get_by_site(self, site_id: str, page: int = 1, per_page: int = 20) -> Tuple[List[Pages], int]:
+        """Obtener páginas por sitio con paginación"""
+        query = Pages.filter(Pages.site_id == site_id).order_by(Pages.id.desc())
+        total = query.count()
+        
+        offset = (page - 1) * per_page
+        pages = query.offset(offset).limit(per_page).all()
+        
+        return pages, total
+
+    def get_by_site_and_published(self, site_id: str, published: bool, page: int = 1, per_page: int = 20) -> Tuple[List[Pages], int]:
+        """Obtener páginas por sitio y estado de publicación con paginación"""
+        query = Pages.filter(
+            Pages.site_id == site_id,
+            Pages.published == published
+        ).order_by(Pages.id.desc())
+        total = query.count()
+        
+        offset = (page - 1) * per_page
+        pages = query.offset(offset).limit(per_page).all()
+        
+        return pages, total
+
     def slug_exists(self, slug: str, exclude_id: Optional[int] = None) -> bool:
         """Verificar si existe una página con el slug dado"""
         query = Pages.filter(Pages.slug == slug)

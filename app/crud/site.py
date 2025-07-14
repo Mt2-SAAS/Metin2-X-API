@@ -9,7 +9,7 @@ from app.schemas.site import SiteCreate, SiteUpdate
 class CRUDSite:
     """CRUD para manejar las operaciones de sitios"""
 
-    def get(self, id: int) -> Optional[Site]:
+    def get(self, id: str) -> Optional[Site]:
         """Obtener un sitio por ID"""
         return Site.filter(Site.id == id).options(
             joinedload(Site.downloads),
@@ -132,7 +132,7 @@ class CRUDSite:
         db_obj.maintenance_mode = False
         return db_obj.save()
 
-    def slug_exists(self, slug: str, exclude_id: Optional[int] = None) -> bool:
+    def slug_exists(self, slug: str, exclude_id: Optional[str] = None) -> bool:
         """Verificar si un slug ya existe"""
         query = Site.filter(Site.slug == slug)
         if exclude_id:
