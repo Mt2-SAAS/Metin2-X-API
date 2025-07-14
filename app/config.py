@@ -1,4 +1,10 @@
 from decouple import config
+from pathlib import Path
+
+# Configuración de directorios
+UPLOAD_DIR = Path("app/static/uploads")
+# Crear directorio si no existe
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class Settings:

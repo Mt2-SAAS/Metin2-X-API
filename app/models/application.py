@@ -1,5 +1,5 @@
 from enum import Enum as PyEnum
-from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, Table, Index, Enum
+from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, Index, Enum
 from sqlalchemy.orm import relationship
 # Local Imports
 from app.database import BaseSaveModel
@@ -9,27 +9,6 @@ from app.database import BaseSaveModel
 class ImageType(PyEnum):
     LOGO = "logo"
     BACKGROUND = "bg"
-
-# Tablas de asociación para relaciones ManyToMany
-site_images = Table(
-    'site_images',
-    BaseSaveModel.metadata,
-    Column('site_id', Integer, ForeignKey('sites.id', ondelete='CASCADE'), primary_key=True),
-    Column('image_id', Integer, ForeignKey('images.id', ondelete='CASCADE'), primary_key=True),
-    # Índice para optimizar consultas
-    Index('idx_site_images_site_id', 'site_id'),
-    Index('idx_site_images_image_id', 'image_id')
-)
-
-
-site_footer_menu = Table(
-    'site_footer_menu',
-    BaseSaveModel.metadata,
-    Column('site_id', Integer, ForeignKey('sites.id', ondelete='CASCADE'), primary_key=True),
-    Column('page_id', Integer, ForeignKey('pages.id', ondelete='CASCADE'), primary_key=True),
-    Index('idx_site_footer_site_id', 'site_id'),
-    Index('idx_site_footer_page_id', 'page_id')
-)
 
 
 class Download(BaseSaveModel):
@@ -66,21 +45,21 @@ class Image(BaseSaveModel):
     }
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False, index=True)
-    image_path = Column(String(500), nullable=False)  # Más espacio para rutas largas
+    filename = Column(String(255), nullable=False, index=True)
+    original_filename = Column(String(255), nullable=False, index=True)  # Nombre original del archivo
+    file_path = Column(String(500), nullable=False)  # Más espacio para rutas largas
     image_type = Column(Enum(ImageType), nullable=False, index=True)
-    alt_text = Column(String(255))  # Para SEO y accesibilidad
     file_size = Column(Integer)  # Tamaño del archivo en bytes
-    is_active = Column(Boolean, default=True, nullable=False, index=True)
-    
+
     # Relaciones
-    sites = relationship("Site", secondary=site_images, back_populates="images")
+    site_id = Column(Integer, ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
+    site = relationship("Site", back_populates="images")
     
     def __str__(self):
-        return f"<Image ({self.name})>"
+        return f"<Image ({self.filename})>"
     
     def __repr__(self):
-        return f"<Image(id={self.id}, name='{self.name}', type='{self.image_type.value}')>"
+        return f"<Image(id={self.id}, filename='{self.filename}', type='{self.image_type.value}')>"
 
 
 
@@ -99,7 +78,8 @@ class Pages(BaseSaveModel):
     meta_description = Column(String(160))  # Para SEO
     meta_keywords = Column(String(255))  # Para SEO
 
-    sites_footer = relationship("Site", secondary=site_footer_menu, back_populates="footer_menu")
+    site_id = Column(Integer, ForeignKey('sites.id', ondelete='CASCADE'), nullable=False, index=True)
+    site = relationship("Site", back_populates="footer_menu")
 
     def __str__(self):
         return f"<Page ({self.title})>"
@@ -138,8 +118,8 @@ class Site(BaseSaveModel):
     maintenance_mode = Column(Boolean, default=False, nullable=False)
     
     # Relaciones
-    images = relationship("Image", secondary=site_images, back_populates="sites")
-    footer_menu = relationship("Pages", secondary=site_footer_menu, back_populates="sites_footer")
+    images = relationship("Image", back_populates="site", cascade="all, delete-orphan")
+    footer_menu = relationship("Pages", back_populates="site", cascade="all, delete-orphan")
     downloads = relationship("Download", back_populates="site", cascade="all, delete-orphan")
     
     def __str__(self):
@@ -152,6 +132,6 @@ class Site(BaseSaveModel):
 # Índices adicionales para optimizar consultas comunes
 Index('idx_pages_published_slug', Pages.published, Pages.slug)
 Index('idx_sites_active_slug', Site.is_active, Site.slug)
-Index('idx_images_active_type', Image.is_active, Image.image_type)
+Index('idx_images_site_type', Image.site_id, Image.image_type)
 Index('idx_downloads_site_published', Download.site_id, Download.published)
 Index('idx_downloads_category_published', Download.category, Download.published)

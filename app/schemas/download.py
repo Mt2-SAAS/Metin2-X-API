@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
-from app.schemas.site import SiteResponse
+# Local import
+# from .site import SiteResponse
 
 
 class DownloadBase(BaseModel):
@@ -100,7 +101,7 @@ class DownloadResponse(BaseModel):
     category: str
     published: bool
     site_id: int
-    site: Optional[SiteResponse] = None
+    # site: Optional[SiteResponse] = None
 
     class Config:
         from_attributes = True

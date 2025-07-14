@@ -45,7 +45,8 @@ class CRUDPage:
             slug=obj_in.slug,
             title=obj_in.title,
             content=obj_in.content,
-            published=obj_in.published
+            published=obj_in.published,
+            site_id=obj_in.site_id
         )
         return db_obj.save()
 

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 # Local Imports
 from .database import BaseSaveModel, engine
 from .api.routes import account, game
@@ -13,6 +14,8 @@ app = FastAPI(
     description="Una API construida con FastAPI y SQLAlchemy",
     version="1.0.0"
 )
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Configurar CORS
 app.add_middleware(

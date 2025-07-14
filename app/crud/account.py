@@ -1,6 +1,6 @@
 from typing import Optional
 # Local Imports
-from app.models.account import Account
+from app.models.account import Account, StatusType
 from app.schemas.account import AccountCreate, AccountUpdate
 from app.core.hashers import make_password, validate_password
 
@@ -63,7 +63,7 @@ class CRUDAccount:
     def is_active(self, account: Account) -> bool:
         """Verificar si la cuenta está activa"""
         # Puedes añadir lógica adicional aquí si tu modelo tiene un campo 'is_active'
-        if account.status == 'OK':
+        if account.status == StatusType.OK:
             return True
         return False
     

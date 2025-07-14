@@ -1,11 +1,13 @@
-from sqlalchemy import Column, Integer, String, Index
+from enum import Enum as PyEnum
+from sqlalchemy import Column, Integer, String, Index, Enum
 from sqlalchemy.orm import validates
 # Local Imports
 from app.database import BaseSaveAccountModel
 
 # Status
-ACCEPT = "OK"
-BANNED = "BANNED"
+class StatusType(PyEnum):
+    OK = "OK" # Estado activo
+    BANNED = "BANNED"
 
 
 class Account(BaseSaveAccountModel):
@@ -18,42 +20,23 @@ class Account(BaseSaveAccountModel):
          'info': {'skip_autogenerate': True}},
     )
 
-    # Definir las opciones de estado
-    STATUS_ACCOUNT_CHOICES = [
-        (ACCEPT, "Available"),
-        (BANNED, "Banned"),
-    ]
-    
-    id = Column(
-        Integer,  # equivalente a INTEGER(11) en MySQL
-        primary_key=True,
-        autoincrement=True,
+    id = Column(Integer, primary_key=True, autoincrement=True,
         comment='ID único de la cuenta'
     )
-    login = Column(
-        String(16),
-        nullable=False,
+    login = Column(String(16),nullable=False,
         comment='LOGIN_MAX_LEN=30'
     )
-    password = Column(
-        String(42),
-        nullable=False,
+    password = Column(String(42), nullable=False,
         comment='PASSWD_MAX_LEN=16; default 45 size'
     )
-    social_id = Column(
-        String(7),
-        nullable=False,
+    social_id = Column(String(7), nullable=False,
         comment='ID de red social asociada'
     )
-    email = Column(
-        String(100),
-        nullable=False,
+    email = Column(String(100),nullable=False, 
         comment='Email del usuario'
     )
-    status = Column(
-        String(8), 
-        default="OK",
-        nullable=False
+    status = Column(Enum(StatusType), nullable=False,
+        comment='Estado de la cuenta (OK, BANNED)'
     )
     
     def __repr__(self):

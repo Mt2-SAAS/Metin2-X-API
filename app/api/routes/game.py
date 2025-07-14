@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Query, HTTPException, Depends
+from fastapi import APIRouter, Query, HTTPException, Depends, UploadFile, File
 from math import ceil
-
 # Local Imports
 from app.api.deps import (
     require_gm_level_implementor
@@ -9,7 +8,8 @@ from app.models.player import Player, Guild
 from app.crud.download import get_download, CRUDDownload
 from app.crud.page import get_page, CRUDPage
 from app.crud.site import get_site, CRUDSite
-
+from app.crud.image import get_image, CRUDImage
+from app.utils.utils import save_upload_file, validate_image
 from app.schemas.player import (
     PaginatedGuildsResponse,
     PaginatedPlayersResponse
@@ -30,7 +30,15 @@ from app.schemas.site import (
     SiteCreate,
     SiteUpdate,
     SiteResponse,
+    SiteResponseDetailed,
     PaginatedSiteResponse
+)
+from app.schemas.image import (
+    ImageCreate,
+    ImageUpdate,
+    ImageResponse,
+    PaginatedImageResponse,
+    ImageType
 )
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -458,7 +466,7 @@ async def list_sites(
         raise HTTPException(status_code=500, detail=f"Error al obtener sitios: {str(e)}")
 
 
-@router.get("/sites/slug/{slug}", response_model=SiteResponse)
+@router.get("/sites/slug/{slug}", response_model=SiteResponseDetailed)
 async def get_site_by_slug(
     slug: str,
     crud: CRUDSite = Depends(get_site)
@@ -475,7 +483,7 @@ async def get_site_by_slug(
     return site
 
 
-@router.get("/sites/{site_id}", response_model=SiteResponse)
+@router.get("/sites/{site_id}", response_model=SiteResponseDetailed)
 async def get_site_by_id(
     _: require_gm_level_implementor,
     site_id: int,
@@ -647,3 +655,207 @@ async def get_site_stats(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener estadísticas: {str(e)}")
 
+
+# Image endpoints
+@router.get("/images", response_model=PaginatedImageResponse)
+async def list_images(
+    page: int = Query(1, ge=1, description="Número de página"),
+    per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
+    site_id: int = Query(None, description="Filtrar por sitio"),
+    image_type: ImageType = Query(None, description="Filtrar por tipo de imagen"),
+    search: str = Query(None, description="Buscar en filename, original_filename o file_path"),
+    crud: CRUDImage = Depends(get_image)
+):
+    """Listar imágenes con paginación y filtros opcionales"""
+    try:
+        # Aplicar filtros y obtener datos paginados
+        if search:
+            images, total = crud.search(search, page=page, per_page=per_page)
+        elif site_id and image_type:
+            images, total = crud.get_by_site_and_type(site_id, image_type, page=page, per_page=per_page)
+        elif site_id:
+            images, total = crud.get_by_site(site_id, page=page, per_page=per_page)
+        elif image_type:
+            images, total = crud.get_by_type(image_type, page=page, per_page=per_page)
+        else:
+            images, total = crud.get_all(page=page, per_page=per_page)
+        
+        # Calcular metadatos de paginación
+        total_pages = ceil(total / per_page) if total > 0 else 1
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return PaginatedImageResponse(
+            response=images,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener imágenes: {str(e)}")
+
+
+@router.get("/images/{image_id}", response_model=ImageResponse)
+async def get_image_by_id(
+    _: require_gm_level_implementor,
+    image_id: int,
+    crud: CRUDImage = Depends(get_image)
+):
+    """Obtener una imagen por ID (solo admins)"""
+    image = crud.get(image_id)
+    if not image:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+    return image
+
+
+@router.post("/images/upload", response_model=ImageResponse)
+async def upload_image(
+    _: require_gm_level_implementor,
+    file: UploadFile = File(...),
+    image_type: ImageType = Query(..., description="Tipo de imagen (logo/bg)"),
+    site_id: int = Query(..., description="ID del sitio al que pertenece la imagen"),
+    crud: CRUDImage = Depends(get_image)
+):
+    """Subir una nueva imagen"""
+    try:
+        # Validar el archivo
+        validate_image(file)
+        
+        # Guardar archivo en disco
+        filename, file_path, file_size = await save_upload_file(file)
+        
+        # Crear registro en base de datos
+        image_data = ImageCreate(
+            filename=filename,
+            original_filename=file.filename,
+            file_path=file_path,
+            image_type=image_type,
+            file_size=file_size,
+            site_id=site_id
+        )
+        
+        new_image = crud.create(obj_in=image_data)
+        return new_image
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al subir imagen: {str(e)}")
+
+
+@router.put("/images/{image_id}", response_model=ImageResponse)
+async def update_image(
+    _: require_gm_level_implementor,
+    image_id: int,
+    image_update: ImageUpdate,
+    crud: CRUDImage = Depends(get_image)
+):
+    """Actualizar metadatos de una imagen (no el archivo)"""
+    db_image = crud.get(image_id)
+    if not db_image:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+    
+    try:
+        updated_image = crud.update(db_obj=db_image, obj_in=image_update)
+        return updated_image
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al actualizar imagen: {str(e)}")
+
+
+@router.post("/images/{image_id}/replace", response_model=ImageResponse)
+async def replace_image_file(
+    _: require_gm_level_implementor,
+    image_id: int,
+    file: UploadFile = File(...),
+    crud: CRUDImage = Depends(get_image)
+):
+    """Reemplazar el archivo de una imagen existente"""
+    db_image = crud.get(image_id)
+    if not db_image:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+    
+    try:
+        # Validar el nuevo archivo
+        validate_image(file)
+        
+        # Eliminar archivo anterior
+        crud.delete_file(db_image)
+        
+        # Guardar nuevo archivo
+        filename, file_path, file_size = await save_upload_file(file)
+        
+        # Actualizar registro en base de datos usando el CRUD update method
+        image_update = ImageUpdate(
+            original_filename=file.filename
+        )
+        
+        # Manually update the file-related fields that aren't in ImageUpdate
+        db_image.filename = filename
+        db_image.file_path = file_path
+        db_image.file_size = file_size
+        
+        # Use the CRUD update method for the fields that are in ImageUpdate
+        updated_image = crud.update(db_obj=db_image, obj_in=image_update)
+        
+        return updated_image
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al reemplazar imagen: {str(e)}")
+
+
+@router.delete("/images/{image_id}")
+async def delete_image(
+    _: require_gm_level_implementor,
+    image_id: int,
+    crud: CRUDImage = Depends(get_image)
+):
+    """Eliminar una imagen y su archivo"""
+    db_image = crud.get(image_id)
+    if not db_image:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+    
+    try:
+        crud.delete(db_image)
+        return {"message": "Imagen eliminada exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al eliminar imagen: {str(e)}")
+
+
+@router.get("/images/site/{site_id}", response_model=PaginatedImageResponse)
+async def get_images_by_site(
+    site_id: int,
+    page: int = Query(1, ge=1, description="Número de página"),
+    per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
+    image_type: ImageType = Query(None, description="Filtrar por tipo de imagen"),
+    crud: CRUDImage = Depends(get_image)
+):
+    """Obtener imágenes de un sitio específico"""
+    try:
+        if image_type:
+            images, total = crud.get_by_site_and_type(site_id, image_type, page=page, per_page=per_page)
+        else:
+            images, total = crud.get_by_site(site_id, page=page, per_page=per_page)
+        
+        # Calcular metadatos de paginación
+        total_pages = ceil(total / per_page) if total > 0 else 1
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return PaginatedImageResponse(
+            response=images,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener imágenes del sitio: {str(e)}")

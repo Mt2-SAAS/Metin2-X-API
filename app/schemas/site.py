@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 
+from .image import Image
+from .page import Page
+from .download import Download
 
 class SiteBase(BaseModel):
     """Base schema for Site with common fields"""
@@ -100,6 +103,32 @@ class SiteUpdate(BaseModel):
         if v is not None and (not v or not v.strip()):
             raise ValueError('El nivel máximo no puede estar vacío')
         return v.strip() if v else v
+
+
+class SiteResponseDetailed(BaseModel):
+    """Response schema for site operations"""
+    id: int
+    name: str
+    slug: str
+    initial_level: str
+    max_level: str
+    rates: Optional[str] = None
+    facebook_url: Optional[str] = None
+    facebook_enable: bool
+    footer_info: Optional[str] = None
+    footer_menu_enable: bool
+    footer_info_enable: bool
+    forum_url: Optional[str] = None
+    last_online: bool
+    is_active: bool
+    maintenance_mode: bool
+
+    images: List[Image] = []
+    footer_menu: List[Page] = []
+    downloads: List[Download] = []
+
+    class Config:
+        from_attributes = True
 
 
 class SiteResponse(BaseModel):

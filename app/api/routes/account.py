@@ -23,7 +23,7 @@ router = APIRouter(prefix="/account", tags=["account"])
 
 
 @router.post("/register", response_model=AccountBase)
-def create_account(
+async def create_account(
     account_in: AccountCreate,
     account: crud_account_dependency,
 ):
@@ -45,7 +45,7 @@ def create_account(
     return account.create(obj_in=account_in)
 
 @router.post("/token")
-def login_for_access_token(
+async def login_for_access_token(
     account: crud_account_dependency,
     form_data: OAuth2PasswordRequestForm = Depends(),
 ):
@@ -67,13 +67,13 @@ def login_for_access_token(
 
 
 @router.get("/me", response_model=AccountBase)
-def read_account_me(current_account: current_account_dependency):
+async def read_account_me(current_account: current_account_dependency):
     """Obtener información de la cuenta actual"""
     return current_account
 
 
 @router.get("/me/is_admin", response_model=AccountBase)
-def is_gm_account(
+async def is_gm_account(
     admin_user: require_gm_level_implementor,
 ):
     """Verificar si la cuenta actual es administrador"""
@@ -81,7 +81,7 @@ def is_gm_account(
 
 
 @router.put("/me", response_model=AccountBase)
-def update_account_me(
+async def update_account_me(
     account_in: AccountUpdate,
     account: crud_account_dependency,
     current_account: current_account_dependency,
@@ -98,7 +98,7 @@ def update_account_me(
 
 
 @router.put("/me/password", response_model=AccountBase)
-def update_password_account_me(
+async def update_password_account_me(
     account: crud_account_dependency,
     account_in: AccountPasswordUpdate,
     current_account: current_account_dependency,
@@ -116,7 +116,7 @@ def update_password_account_me(
 
 
 @router.get("/me/players", response_model=PlayerUserResponse)
-def get_player(
+async def get_player(
     current_account: current_account_dependency,
 ):
     players = Player.filter(Player.account_id==current_account.id).all()

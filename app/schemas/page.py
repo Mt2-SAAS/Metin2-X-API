@@ -8,6 +8,7 @@ class PageBase(BaseModel):
     title: str = Field(..., max_length=100, description="Título de la página")
     content: str = Field(..., description="Contenido de la página")
     published: bool = Field(default=True, description="Indica si la página está publicada")
+    site_id: int = Field(..., description="ID del sitio al que pertenece la página")
 
     @field_validator('slug')
     @classmethod
@@ -45,6 +46,7 @@ class PageUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=100, description="Título de la página")
     content: Optional[str] = Field(None, description="Contenido de la página")
     published: Optional[bool] = Field(None, description="Indica si la página está publicada")
+    site_id: Optional[int] = Field(None, description="ID del sitio al que pertenece la página")
 
     @field_validator('slug')
     @classmethod
@@ -93,6 +95,7 @@ class PageResponse(BaseModel):
     title: str
     content: str
     published: bool
+    site_id: int
 
     class Config:
         from_attributes = True

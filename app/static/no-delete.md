@@ -1,0 +1,1 @@
+no delete this file static dir
