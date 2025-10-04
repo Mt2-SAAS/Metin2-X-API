@@ -1,3 +1,4 @@
+"""Esquemas para la gestión de imágenes usando Pydantic"""
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from enum import Enum
@@ -15,7 +16,11 @@ class ImageType(str, Enum):
 class ImageBase(BaseModel):
     """Base schema for Image with common fields"""
     filename: str = Field(..., max_length=255, description="Nombre único del archivo")
-    original_filename: Optional[str] = Field(None, max_length=255, description="Nombre original del archivo")
+    original_filename: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Nombre original del archivo"
+    )
     file_path: str = Field(..., max_length=500, description="Ruta completa del archivo")
     image_type: ImageType = Field(..., description="Tipo de imagen (logo/bg)")
     file_size: Optional[int] = Field(None, description="Tamaño del archivo en bytes")
@@ -24,6 +29,7 @@ class ImageBase(BaseModel):
     @field_validator('filename')
     @classmethod
     def filename_must_not_be_empty(cls, v):
+        """Validate that filename is not empty or just whitespace"""
         if not v or not v.strip():
             raise ValueError('El nombre del archivo no puede estar vacío')
         return v.strip()
@@ -31,6 +37,7 @@ class ImageBase(BaseModel):
     @field_validator('file_path')
     @classmethod
     def file_path_must_not_be_empty(cls, v):
+        """Validate that file_path is not empty or just whitespace"""
         if not v or not v.strip():
             raise ValueError('La ruta del archivo no puede estar vacía')
         return v.strip()
@@ -38,11 +45,13 @@ class ImageBase(BaseModel):
     @field_validator('file_size')
     @classmethod
     def file_size_must_be_positive(cls, v):
+        """Validate that file_size is positive if provided"""
         if v is not None and v < 0:
             raise ValueError('El tamaño del archivo debe ser positivo')
         return v
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
@@ -56,18 +65,24 @@ class ImageCreate(BaseModel):
     site_id: str = Field(..., description="ID del sitio al que pertenece la imagen")
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
 class ImageUpdate(BaseModel):
     """Schema for updating image metadata (not for file replacement)"""
-    original_filename: Optional[str] = Field(None, max_length=255, description="Nombre original del archivo")
+    original_filename: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Nombre original del archivo"
+    )
     image_type: Optional[ImageType] = Field(None, description="Tipo de imagen (logo/bg)")
     site_id: Optional[str] = Field(None, description="ID del sitio al que pertenece la imagen")
 
     @field_validator('original_filename')
     @classmethod
     def original_filename_must_not_be_empty(cls, v):
+        """Validate that original_filename is not empty or just whitespace if provided"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('El nombre original no puede estar vacío')
         return v.strip() if v else v
@@ -79,6 +94,7 @@ class ImageUploadRequest(BaseModel):
     site_id: str = Field(..., description="ID del sitio al que pertenece la imagen")
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
@@ -87,12 +103,12 @@ class Image(ImageBase):
     id: int = Field(..., description="ID único de la imagen")
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
 class ImageInDB(Image):
     """Image schema as stored in database"""
-    pass
 
 
 class ImageResponse(BaseModel):
@@ -106,10 +122,12 @@ class ImageResponse(BaseModel):
     site_id: str
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
 class PaginatedImageResponse(BaseModel):
+    """Schema for paginated image responses"""
     response: List[ImageResponse]
     total: int
     page: int

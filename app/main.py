@@ -1,3 +1,7 @@
+"""
+    Archivo principal de la aplicación FastAPI. 
+    Configura la aplicación, incluye rutas y maneja middleware.
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -32,10 +36,12 @@ app.include_router(game.router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
+    """Página de inicio de la API"""
     return {"message": "¡Bienvenido a mi API con FastAPI y SQLAlchemy!"}
 
 @app.get("/health")
 def health_check():
+    """Endpoint para verificar el estado de la API"""
     return {"status": "healthy"}
 
 if __name__ == "__main__":

@@ -52,6 +52,7 @@ async def list_players(
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
 ):
+    """Listar jugadores con paginación"""
     try:
         query = Player.query()
 
@@ -74,9 +75,12 @@ async def list_players(
             has_next=has_next,
             has_prev=has_prev
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener jugadores: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener jugadores: {str(e)}"
+        ) from e
 
 
 @router.get("/guilds", response_model=PaginatedGuildsResponse)
@@ -84,6 +88,7 @@ async def list_guilds(
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
 ):
+    """Listar gremios con paginación"""
     try:
         query = Guild.query()
 
@@ -106,9 +111,12 @@ async def list_guilds(
             has_next=has_next,
             has_prev=has_prev
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener gremios: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener gremios: {str(e)}"
+        ) from e
 
 
 # Download endpoints
@@ -129,7 +137,9 @@ async def list_downloads(
         if search:
             downloads, total = crud.search(search, page=page, per_page=per_page)
         elif site_id and category:
-            downloads, total = crud.get_by_site_and_category(site_id, category, page=page, per_page=per_page)
+            downloads, total = crud.get_by_site_and_category(
+                site_id, category, page=page, per_page=per_page
+            )
         elif site_id:
             downloads, total = crud.get_by_site(site_id, page=page, per_page=per_page)
         elif category:
@@ -140,12 +150,12 @@ async def list_downloads(
             downloads, total = crud.get_published(page=page, per_page=per_page)
         else:
             downloads, total = crud.get_paginated(page=page, per_page=per_page)
-        
+
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page) if total > 0 else 1
         has_next = page < total_pages
         has_prev = page > 1
-        
+
         return PaginatedDownloadResponse(
             response=downloads,
             total=total,
@@ -156,7 +166,10 @@ async def list_downloads(
             has_prev=has_prev
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener descargas: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener descargas: {str(e)}"
+        ) from e
 
 
 @router.get("/downloads/{download_id}", response_model=DownloadResponse)
@@ -183,9 +196,15 @@ async def create_download(
         new_download = crud.create(obj_in=download)
         return new_download
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al crear descarga: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear descarga: {str(e)}"
+        ) from e
 
 
 @router.put("/downloads/{download_id}", response_model=DownloadResponse)
@@ -199,14 +218,19 @@ async def update_download(
     db_download = crud.get(download_id)
     if not db_download:
         raise HTTPException(status_code=404, detail="Descarga no encontrada")
-    
     try:
         updated_download = crud.update(db_obj=db_download, obj_in=download_update)
         return updated_download
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al actualizar descarga: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar descarga: {str(e)}"
+        )from e
 
 
 @router.patch("/downloads/{download_id}/publish", response_model=DownloadResponse)
@@ -219,12 +243,15 @@ async def publish_download(
     db_download = crud.get(download_id)
     if not db_download:
         raise HTTPException(status_code=404, detail="Descarga no encontrada")
-    
+
     try:
         published_download = crud.publish(db_download)
         return published_download
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al publicar descarga: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al publicar descarga: {str(e)}"
+        ) from e
 
 
 @router.patch("/downloads/{download_id}/unpublish", response_model=DownloadResponse)
@@ -237,12 +264,15 @@ async def unpublish_download(
     db_download = crud.get(download_id)
     if not db_download:
         raise HTTPException(status_code=404, detail="Descarga no encontrada")
-    
+
     try:
         unpublished_download = crud.unpublish(db_download)
         return unpublished_download
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al despublicar descarga: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al despublicar descarga: {str(e)}"
+        ) from e
 
 
 @router.delete("/downloads/{download_id}")
@@ -255,12 +285,15 @@ async def delete_download(
     db_download = crud.get(download_id)
     if not db_download:
         raise HTTPException(status_code=404, detail="Descarga no encontrada")
-    
+
     try:
         crud.delete(db_download)
         return {"message": "Descarga eliminada exitosamente"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al eliminar descarga: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al eliminar descarga: {str(e)}"
+        ) from e
 
 
 @router.get("/downloads/site/{site_id}", response_model=PaginatedDownloadResponse)
@@ -274,15 +307,17 @@ async def get_downloads_by_site(
     """Obtener descargas de un sitio específico"""
     try:
         if category:
-            downloads, total = crud.get_by_site_and_category(site_id, category, page=page, per_page=per_page)
+            downloads, total = crud.get_by_site_and_category(
+                site_id, category, page=page, per_page=per_page
+            )
         else:
             downloads, total = crud.get_by_site(site_id, page=page, per_page=per_page)
-        
+
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page) if total > 0 else 1
         has_next = page < total_pages
         has_prev = page > 1
-        
+
         return PaginatedDownloadResponse(
             response=downloads,
             total=total,
@@ -293,7 +328,10 @@ async def get_downloads_by_site(
             has_prev=has_prev
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener descargas del sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener descargas del sitio: {str(e)}"
+        ) from e
 
 
 # Page endpoints
@@ -315,12 +353,12 @@ async def list_pages(
             pages, total = crud.get_published(page=page, per_page=per_page)
         else:
             pages, total = crud.get_paginated(page=page, per_page=per_page)
-        
+
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page) if total > 0 else 1
         has_next = page < total_pages
         has_prev = page > 1
-        
+
         return PaginatedPageResponse(
             response=pages,
             total=total,
@@ -331,7 +369,10 @@ async def list_pages(
             has_prev=has_prev
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener páginas: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener páginas: {str(e)}"
+        )
 
 
 @router.get("/pages/slug/{slug}", response_model=PageResponse)
@@ -343,11 +384,11 @@ async def get_page_by_slug(
     page = crud.get_by_slug(slug)
     if not page:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    
+
     # Si la página no está publicada, solo permite acceso a admins
     if not page.published:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    
+
     return page
 
 
@@ -374,13 +415,19 @@ async def create_page(
         # Verificar que el slug no exista
         if crud.slug_exists(page.slug):
             raise HTTPException(status_code=400, detail="Ya existe una página con este slug")
-        
+
         new_page = crud.create(obj_in=page)
         return new_page
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al crear página: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear página: {str(e)}"
+        ) from e
 
 
 @router.put("/pages/{page_id}", response_model=PageResponse)
@@ -394,18 +441,23 @@ async def update_page(
     db_page = crud.get(page_id)
     if not db_page:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    
+
     try:
         # Si se está actualizando el slug, verificar que no exista
         if page_update.slug and crud.slug_exists(page_update.slug, exclude_id=page_id):
             raise HTTPException(status_code=400, detail="Ya existe una página con este slug")
-        
         updated_page = crud.update(db_obj=db_page, obj_in=page_update)
         return updated_page
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al actualizar página: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar página: {str(e)}"
+        ) from e
 
 
 @router.patch("/pages/{page_id}/publish", response_model=PageResponse)
@@ -418,12 +470,14 @@ async def publish_page(
     db_page = crud.get(page_id)
     if not db_page:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    
     try:
         published_page = crud.publish(db_page)
         return published_page
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al publicar página: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al publicar página: {str(e)}"
+        ) from e
 
 
 @router.patch("/pages/{page_id}/unpublish", response_model=PageResponse)
@@ -436,12 +490,14 @@ async def unpublish_page(
     db_page = crud.get(page_id)
     if not db_page:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    
     try:
         unpublished_page = crud.unpublish(db_page)
         return unpublished_page
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al despublicar página: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al despublicar página: {str(e)}"
+        ) from e
 
 
 @router.delete("/pages/{page_id}")
@@ -454,12 +510,14 @@ async def delete_page(
     db_page = crud.get(page_id)
     if not db_page:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    
     try:
         crud.delete(db_page)
         return {"message": "Página eliminada exitosamente"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al eliminar página: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al eliminar página: {str(e)}"
+        ) from e
 
 
 @router.get("/pages/site/{site_id}", response_model=PaginatedPageResponse)
@@ -473,15 +531,19 @@ async def get_pages_by_site(
     """Obtener páginas de un sitio específico"""
     try:
         if published_only:
-            pages, total = crud.get_by_site_and_published(site_id, published=True, page=page, per_page=per_page)
+            pages, total = crud.get_by_site_and_published(
+                site_id, published=True,
+                page=page,
+                per_page=per_page
+            )
         else:
             pages, total = crud.get_by_site(site_id, page=page, per_page=per_page)
-        
+
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page) if total > 0 else 1
         has_next = page < total_pages
         has_prev = page > 1
-        
+
         return PaginatedPageResponse(
             response=pages,
             total=total,
@@ -492,7 +554,10 @@ async def get_pages_by_site(
             has_prev=has_prev
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener páginas del sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener páginas del sitio: {str(e)}"
+        ) from e
 
 
 # Site endpoints
@@ -517,12 +582,12 @@ async def list_sites(
             sites, total = crud.get_in_maintenance(page=page, per_page=per_page)
         else:
             sites, total = crud.get_paginated(page=page, per_page=per_page)
-        
+
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page) if total > 0 else 1
         has_next = page < total_pages
         has_prev = page > 1
-        
+
         return PaginatedSiteResponse(
             response=sites,
             total=total,
@@ -533,7 +598,10 @@ async def list_sites(
             has_prev=has_prev
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener sitios: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener sitios: {str(e)}"
+        ) from e
 
 
 @router.get("/sites/slug/{slug}", response_model=SiteResponseDetailed)
@@ -545,11 +613,9 @@ async def get_site_by_slug(
     site = crud.get_by_slug(slug)
     if not site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     # Si el sitio no está activo, solo permite acceso a admins
     if not site.is_active:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     return site
 
 
@@ -577,9 +643,15 @@ async def create_site(
         new_site = crud.create(obj_in=site)
         return new_site
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al crear sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear sitio: {str(e)}"
+        ) from e
 
 
 @router.put("/sites/{site_id}", response_model=SiteResponse)
@@ -593,14 +665,19 @@ async def update_site(
     db_site = crud.get(site_id)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     try:
         updated_site = crud.update(db_obj=db_site, obj_in=site_update)
         return updated_site
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al actualizar sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar sitio: {str(e)}"
+        ) from e
 
 
 @router.patch("/sites/{site_id}/activate", response_model=SiteResponse)
@@ -613,12 +690,14 @@ async def activate_site(
     db_site = crud.get(site_id)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     try:
         activated_site = crud.activate(db_site)
         return activated_site
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al activar sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al activar sitio: {str(e)}"
+        ) from e
 
 
 @router.patch("/sites/{site_id}/deactivate", response_model=SiteResponse)
@@ -631,12 +710,14 @@ async def deactivate_site(
     db_site = crud.get(site_id)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     try:
         deactivated_site = crud.deactivate(db_site)
         return deactivated_site
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al desactivar sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al desactivar sitio: {str(e)}"
+        ) from e
 
 
 @router.patch("/sites/{site_id}/maintenance/enable", response_model=SiteResponse)
@@ -649,12 +730,14 @@ async def enable_maintenance_mode(
     db_site = crud.get(site_id)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     try:
         maintenance_site = crud.enable_maintenance(db_site)
         return maintenance_site
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al habilitar mantenimiento: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al habilitar mantenimiento: {str(e)}"
+        ) from e
 
 
 @router.patch("/sites/{site_id}/maintenance/disable", response_model=SiteResponse)
@@ -667,12 +750,14 @@ async def disable_maintenance_mode(
     db_site = crud.get(site_id)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     try:
         normal_site = crud.disable_maintenance(db_site)
         return normal_site
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al deshabilitar mantenimiento: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al deshabilitar mantenimiento: {str(e)}"
+        ) from e
 
 
 @router.delete("/sites/{site_id}")
@@ -685,12 +770,14 @@ async def delete_site(
     db_site = crud.get(site_id)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     try:
         crud.delete(db_site)
         return {"message": "Sitio eliminado exitosamente"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al eliminar sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al eliminar sitio: {str(e)}"
+        ) from e
 
 
 @router.get("/sites/{site_slug}/stats")
@@ -702,7 +789,6 @@ async def get_site_stats(
     db_site = crud.get_by_slug(site_slug)
     if not db_site:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
-    
     try:
         # from app.crud.download import get_download
         download_crud = get_download()
@@ -715,13 +801,19 @@ async def get_site_stats(
         time_ago_24_hours = datetime.now() - timedelta(hours=24)
 
         # Player online
-        online_players_5_minutes = Player.query(refresh=True).filter(Player.last_play > time_ago_5_minutes).count()
-        online_players_24_hours = Player.query(refresh=True).filter(Player.last_play > time_ago_24_hours).count()
+        online_players_5_minutes = Player.query(refresh=True).filter(
+            Player.last_play > time_ago_5_minutes
+        ).count()
+        online_players_24_hours = Player.query(refresh=True).filter(
+            Player.last_play > time_ago_24_hours
+        ).count()
 
         # Contar descargas del sitio
-        downloads_list, downloads_total = download_crud.get_by_site(db_site.id, page=1, per_page=1000)
+        downloads_list, downloads_total = download_crud.get_by_site(
+            db_site.id, page=1, per_page=1000
+        )
         downloads_published = len([d for d in downloads_list if d.published])
-        
+
         return {
             "site_id": db_site.id,
             "site_name": db_site.name,
@@ -737,7 +829,10 @@ async def get_site_stats(
             "updated_at": db_site.updated_at
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener estadísticas: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener estadísticas: {str(e)}"
+        ) from e
 
 
 # Image endpoints
@@ -757,19 +852,21 @@ async def list_images(
         if search:
             images, total = crud.search(search, page=page, per_page=per_page)
         elif site_id and image_type:
-            images, total = crud.get_by_site_and_type(site_id, image_type, page=page, per_page=per_page)
+            images, total = crud.get_by_site_and_type(
+                site_id, image_type, page=page, per_page=per_page
+            )
         elif site_id:
             images, total = crud.get_by_site(site_id, page=page, per_page=per_page)
         elif image_type:
             images, total = crud.get_by_type(image_type, page=page, per_page=per_page)
         else:
             images, total = crud.get_all(page=page, per_page=per_page)
-        
+
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page) if total > 0 else 1
         has_next = page < total_pages
         has_prev = page > 1
-        
+
         return PaginatedImageResponse(
             response=images,
             total=total,
@@ -780,7 +877,10 @@ async def list_images(
             has_prev=has_prev
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener imágenes: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener imágenes: {str(e)}"
+        ) from e
 
 
 @router.get("/images/{image_id}", response_model=ImageResponse)
@@ -808,10 +908,10 @@ async def upload_image(
     try:
         # Validar el archivo
         validate_image(file)
-        
+
         # Guardar archivo en disco
         filename, file_path, file_size = await save_upload_file(file)
-        
+
         # Crear registro en base de datos
         image_data = ImageCreate(
             filename=filename,
@@ -821,14 +921,20 @@ async def upload_image(
             file_size=file_size,
             site_id=site_id
         )
-        
+
         new_image = crud.create(obj_in=image_data)
         return new_image
-        
+
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al subir imagen: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al subir imagen: {str(e)}"
+        ) from e
 
 
 @router.put("/images/{image_id}", response_model=ImageResponse)
@@ -842,14 +948,19 @@ async def update_image(
     db_image = crud.get(image_id)
     if not db_image:
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
-    
     try:
         updated_image = crud.update(db_obj=db_image, obj_in=image_update)
         return updated_image
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al actualizar imagen: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar imagen: {str(e)}"
+        ) from e
 
 
 @router.post("/images/{image_id}/replace", response_model=ImageResponse)
@@ -863,36 +974,42 @@ async def replace_image_file(
     db_image = crud.get(image_id)
     if not db_image:
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
-    
+
     try:
         # Validar el nuevo archivo
         validate_image(file)
-        
+
         # Eliminar archivo anterior
         crud.delete_file(db_image)
-        
+
         # Guardar nuevo archivo
         filename, file_path, file_size = await save_upload_file(file)
-        
+
         # Actualizar registro en base de datos usando el CRUD update method
         image_update = ImageUpdate(
             original_filename=file.filename
         )
-        
+
         # Manually update the file-related fields that aren't in ImageUpdate
         db_image.filename = filename
         db_image.file_path = file_path
         db_image.file_size = file_size
-        
+
         # Use the CRUD update method for the fields that are in ImageUpdate
         updated_image = crud.update(db_obj=db_image, obj_in=image_update)
-        
+
         return updated_image
-        
+
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al reemplazar imagen: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al reemplazar imagen: {str(e)}"
+        ) from e
 
 
 @router.delete("/images/{image_id}")
@@ -905,12 +1022,14 @@ async def delete_image(
     db_image = crud.get(image_id)
     if not db_image:
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
-    
     try:
         crud.delete(db_image)
         return {"message": "Imagen eliminada exitosamente"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al eliminar imagen: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al eliminar imagen: {str(e)}"
+        ) from e
 
 
 @router.get("/images/site/{site_id}", response_model=PaginatedImageResponse)
@@ -924,15 +1043,19 @@ async def get_images_by_site(
     """Obtener imágenes de un sitio específico"""
     try:
         if image_type:
-            images, total = crud.get_by_site_and_type(site_id, image_type, page=page, per_page=per_page)
+            images, total = crud.get_by_site_and_type(
+                site_id, image_type, page=page, per_page=per_page
+            )
         else:
-            images, total = crud.get_by_site(site_id, page=page, per_page=per_page)
-        
+            images, total = crud.get_by_site(
+                site_id, page=page, per_page=per_page
+            )
+
         # Calcular metadatos de paginación
         total_pages = ceil(total / per_page) if total > 0 else 1
         has_next = page < total_pages
         has_prev = page > 1
-        
+
         return PaginatedImageResponse(
             response=images,
             total=total,
@@ -943,4 +1066,7 @@ async def get_images_by_site(
             has_prev=has_prev
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener imágenes del sitio: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener imágenes del sitio: {str(e)}"
+        ) from e

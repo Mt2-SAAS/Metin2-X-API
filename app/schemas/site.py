@@ -1,3 +1,4 @@
+"""Eschemas for Site operations"""
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 
@@ -6,7 +7,7 @@ from .page import Page
 from .download import Download
 
 class SiteBase(BaseModel):
-    """Base schema for Site with common fields"""
+    """Esquema base para un sitio con campos comunes"""
     name: str = Field(..., max_length=255, description="Nombre del sitio")
     slug: str = Field(..., max_length=100, description="Slug único del sitio")
     initial_level: str = Field(..., max_length=10, description="Nivel inicial")
@@ -25,6 +26,7 @@ class SiteBase(BaseModel):
     @field_validator('name')
     @classmethod
     def name_must_not_be_empty(cls, v):
+        """Validacion que el nombre no esté vacío o solo espacios en blanco"""
         if not v or not v.strip():
             raise ValueError('El nombre no puede estar vacío')
         return v.strip()
@@ -32,6 +34,7 @@ class SiteBase(BaseModel):
     @field_validator('slug')
     @classmethod
     def slug_must_not_be_empty(cls, v):
+        """Validacion que el slug no esté vacío o solo espacios en blanco"""
         if not v or not v.strip():
             raise ValueError('El slug no puede estar vacío')
         return v.strip()
@@ -39,6 +42,7 @@ class SiteBase(BaseModel):
     @field_validator('initial_level')
     @classmethod
     def initial_level_must_not_be_empty(cls, v):
+        """Validacion que el nivel inicial no esté vacío o solo espacios en blanco"""
         if not v or not v.strip():
             raise ValueError('El nivel inicial no puede estar vacío')
         return v.strip()
@@ -46,21 +50,22 @@ class SiteBase(BaseModel):
     @field_validator('max_level')
     @classmethod
     def max_level_must_not_be_empty(cls, v):
+        """Validacion que el nivel máximo no esté vacío o solo espacios en blanco"""
         if not v or not v.strip():
             raise ValueError('El nivel máximo no puede estar vacío')
         return v.strip()
 
     class Config:
+        """Pydantic configuracion"""
         from_attributes = True
 
 
 class SiteCreate(SiteBase):
-    """Schema for creating a new site"""
-    pass
+    """Esquema para crear un nuevo sitio"""
 
 
 class SiteUpdate(BaseModel):
-    """Schema for updating site information"""
+    """Esquema para actualizar un sitio (todos los campos opcionales)"""
     name: Optional[str] = Field(None, max_length=255, description="Nombre del sitio")
     slug: Optional[str] = Field(None, max_length=100, description="Slug único del sitio")
     initial_level: Optional[str] = Field(None, max_length=10, description="Nivel inicial")
@@ -79,6 +84,7 @@ class SiteUpdate(BaseModel):
     @field_validator('name')
     @classmethod
     def name_must_not_be_empty(cls, v):
+        """Validacion que el nombre no esté vacío o solo espacios en blanco"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('El nombre no puede estar vacío')
         return v.strip() if v else v
@@ -86,6 +92,7 @@ class SiteUpdate(BaseModel):
     @field_validator('slug')
     @classmethod
     def slug_must_not_be_empty(cls, v):
+        """Validacion que el slug no esté vacío o solo espacios en blanco"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('El slug no puede estar vacío')
         return v.strip() if v else v
@@ -93,6 +100,7 @@ class SiteUpdate(BaseModel):
     @field_validator('initial_level')
     @classmethod
     def initial_level_must_not_be_empty(cls, v):
+        """Validacion que el nivel inicial no esté vacío o solo espacios en blanco"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('El nivel inicial no puede estar vacío')
         return v.strip() if v else v
@@ -100,13 +108,14 @@ class SiteUpdate(BaseModel):
     @field_validator('max_level')
     @classmethod
     def max_level_must_not_be_empty(cls, v):
+        """Validacion que el nivel máximo no esté vacío o solo espacios en blanco"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('El nivel máximo no puede estar vacío')
         return v.strip() if v else v
 
 
 class SiteResponseDetailed(BaseModel):
-    """Response schema for site operations"""
+    """Respuesta detallada del sitio incluyendo relaciones"""
     id: str
     name: str
     slug: str
@@ -128,11 +137,12 @@ class SiteResponseDetailed(BaseModel):
     downloads: List[Download] = []
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
 class SiteResponse(BaseModel):
-    """Response schema for site operations"""
+    """Respuesta básica del sitio sin relaciones"""
     id: str
     name: str
     slug: str
@@ -150,6 +160,7 @@ class SiteResponse(BaseModel):
     maintenance_mode: bool
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
@@ -158,15 +169,16 @@ class Site(SiteBase):
     id: str = Field(..., description="ID único del sitio")
 
     class Config:
+        """Pydantic configuration"""
         from_attributes = True
 
 
 class SiteInDB(Site):
     """Site schema as stored in database"""
-    pass
 
 
 class PaginatedSiteResponse(BaseModel):
+    """Eschema for paginated site responses"""
     response: List[SiteResponse]
     total: int
     page: int

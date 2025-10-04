@@ -34,14 +34,14 @@ async def create_account(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El login ya está registrado"
         )
-    
+
     # Verificar si el email ya existe
     if account.get_by_email(email=account_in.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El email ya está registrado"
         )
-    
+
     return account.create(obj_in=account_in)
 
 @router.post("/token")
@@ -57,7 +57,7 @@ async def login_for_access_token(
             detail="Login o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": db_account.login},  # Usamos login como identificador
@@ -119,5 +119,6 @@ async def update_password_account_me(
 async def get_player(
     current_account: current_account_dependency,
 ):
+    """Obtener los personajes asociados a la cuenta actual"""
     players = Player.query(refresh=True).filter(Player.account_id==current_account.id).all()
     return PlayerUserResponse(players=players)

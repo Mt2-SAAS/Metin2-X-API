@@ -1,3 +1,4 @@
+"""Database setup and session management using SQLAlchemy."""
 from typing import Generator
 from sqlalchemy import create_engine, Column, DateTime
 from sqlalchemy.ext.declarative import declarative_base
@@ -81,19 +82,19 @@ class TimestampMixin:
 
 def get_base_save_model():
     """Obtener la sesión de base de datos para modelos que necesitan guardar datos"""
-    Base = declarative_base()
-    BaseAccount = declarative_base()
-    BasePlayer = declarative_base()
-    BaseCommon = declarative_base()
+    base = declarative_base()
+    base_account = declarative_base()
+    base_player = declarative_base()
+    base_common = declarative_base()
 
     session = SessionApp()
     session_account = SessionLocalAccount()
     session_player = SessionLocalPlayer()
     session_common = SessionLocalCommon()
 
-    class BaseSaveModel(Base, TimestampMixin):
+    class BaseModel(base, TimestampMixin):
         """Clase base para modelos que necesitan guardar datos en la base de datos"""
-        
+
         __abstract__ = True
 
         def save(self):
@@ -112,7 +113,7 @@ def get_base_save_model():
         def filter(cls, *args, **kwargs):
             """Filtrar modelos por expresiones o atributos"""
             return session.query(cls).filter(*args, **kwargs)
-        
+
         @classmethod
         def query(cls) -> Query:
             """Realizar una consulta a la base de datos
@@ -120,9 +121,9 @@ def get_base_save_model():
             """
             return session.query(cls)
 
-    class BaseSaveAccountModel(BaseAccount):
+    class BaseAccountModel(base_account):
         """Clase base para modelos que necesitan guardar datos en la base de datos"""
-        
+
         __abstract__ = True
 
         def save(self):
@@ -141,7 +142,7 @@ def get_base_save_model():
         def filter(cls, *args, **kwargs):
             """Filtrar modelos por expresiones o atributos"""
             return session_account.query(cls).filter(*args, **kwargs)
-        
+
         @classmethod
         def query(cls, refresh=False) -> Query:
             """Realizar una consulta a la base de datos
@@ -152,10 +153,10 @@ def get_base_save_model():
             if refresh:
                 session_player.expire_all()
             return session_account.query(cls)
-    
-    class BaseSavePlayerModel(BasePlayer):
+
+    class BasePlayerModel(base_player):
         """Clase base para modelos que necesitan guardar datos en la base de datos"""
-        
+
         __abstract__ = True
 
         def save(self):
@@ -174,7 +175,7 @@ def get_base_save_model():
         def filter(cls, *args, **kwargs):
             """Filtrar modelos por expresiones o atributos"""
             return session_player.query(cls).filter(*args, **kwargs)
-        
+
         @classmethod
         def query(cls, refresh=False) -> Query:
             """Realizar una consulta a la base de datos
@@ -186,9 +187,9 @@ def get_base_save_model():
                 session_player.expire_all()
             return session_player.query(cls)
 
-    class BaseSaveCommonModel(BaseCommon):
+    class BaseCommonModel(base_common):
         """Clase base para modelos que necesitan guardar datos en la base de datos"""
-        
+
         __abstract__ = True
 
         def save(self):
@@ -207,7 +208,7 @@ def get_base_save_model():
         def filter(cls, *args, **kwargs):
             """Filtrar modelos por expresiones o atributos"""
             return session_common.query(cls).filter(*args, **kwargs)
-        
+
         @classmethod
         def query(cls, refresh=False) -> Query:
             """Realizar una consulta a la base de datos
@@ -220,14 +221,11 @@ def get_base_save_model():
             return session_common.query(cls)
 
     return (
-        BaseSaveModel,
-        BaseSaveAccountModel,
-        BaseSavePlayerModel,
-        BaseSaveCommonModel
+        BaseModel,
+        BaseAccountModel,
+        BasePlayerModel,
+        BaseCommonModel
     )
-
-
-
 
 
 # Crear Base class and get session

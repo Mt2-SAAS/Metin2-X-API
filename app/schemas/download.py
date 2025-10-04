@@ -1,3 +1,4 @@
+"""Esquemas para la gestión de descargas usando Pydantic"""
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 # Local import
@@ -16,6 +17,7 @@ class DownloadBase(BaseModel):
     @field_validator('provider')
     @classmethod
     def provider_must_not_be_empty(cls, v):
+        """Ensure provider is not empty or just whitespace"""
         if not v or not v.strip():
             raise ValueError('El proveedor no puede estar vacío')
         return v.strip()
@@ -23,6 +25,7 @@ class DownloadBase(BaseModel):
     @field_validator('link')
     @classmethod
     def link_must_not_be_empty(cls, v):
+        """Ensure link is not empty or just whitespace"""
         if not v or not v.strip():
             raise ValueError('El enlace no puede estar vacío')
         return v.strip()
@@ -30,17 +33,18 @@ class DownloadBase(BaseModel):
     @field_validator('category')
     @classmethod
     def category_must_not_be_empty(cls, v):
+        """Ensure category is not empty or just whitespace"""
         if not v or not v.strip():
             raise ValueError('La categoría no puede estar vacía')
         return v.strip()
 
     class Config:
+        """Pydantic configuration to allow ORM mode"""
         from_attributes = True
 
 
 class DownloadCreate(DownloadBase):
     """Schema for creating a new download"""
-    pass
 
 
 class DownloadUpdate(BaseModel):
@@ -55,6 +59,7 @@ class DownloadUpdate(BaseModel):
     @field_validator('provider')
     @classmethod
     def provider_must_not_be_empty(cls, v):
+        """Ensure provider is not empty or just whitespace if provided"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('El proveedor no puede estar vacío')
         return v.strip() if v else v
@@ -62,6 +67,7 @@ class DownloadUpdate(BaseModel):
     @field_validator('link')
     @classmethod
     def link_must_not_be_empty(cls, v):
+        """Ensure link is not empty or just whitespace if provided"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('El enlace no puede estar vacío')
         return v.strip() if v else v
@@ -69,6 +75,7 @@ class DownloadUpdate(BaseModel):
     @field_validator('category')
     @classmethod
     def category_must_not_be_empty(cls, v):
+        """Ensure category is not empty or just whitespace if provided"""
         if v is not None and (not v or not v.strip()):
             raise ValueError('La categoría no puede estar vacía')
         return v.strip() if v else v
@@ -84,12 +91,12 @@ class Download(DownloadBase):
     id: int = Field(..., description="ID único de la descarga")
 
     class Config:
+        """Pydantic configuration to allow ORM mode"""
         from_attributes = True
 
 
 class DownloadInDB(Download):
     """Download schema as stored in database"""
-    pass
 
 
 class DownloadResponse(BaseModel):
@@ -104,10 +111,12 @@ class DownloadResponse(BaseModel):
     # site: Optional[SiteResponse] = None
 
     class Config:
+        """Pydantic configuration to allow ORM mode"""
         from_attributes = True
 
 
 class PaginatedDownloadResponse(BaseModel):
+    """Schema for paginated download responses"""
     response: List[DownloadResponse]
     total: int
     page: int
