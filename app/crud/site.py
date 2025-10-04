@@ -1,3 +1,4 @@
+"""CRUD para manejar las operaciones de sitios"""
 from typing import Optional, List, Tuple
 from math import ceil
 from sqlalchemy.orm import joinedload
@@ -9,9 +10,9 @@ from app.schemas.site import SiteCreate, SiteUpdate
 class CRUDSite:
     """CRUD para manejar las operaciones de sitios"""
 
-    def get(self, id: str) -> Optional[Site]:
+    def get(self, site_id: str) -> Optional[Site]:
         """Obtener un sitio por ID"""
-        return Site.filter(Site.id == id).options(
+        return Site.filter(Site.id == site_id).options(
             joinedload(Site.downloads),
             joinedload(Site.images),
             joinedload(Site.footer_menu)
@@ -33,42 +34,42 @@ class CRUDSite:
         """Obtener sitios paginados con información de total"""
         query = Site.query()
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         sites = query.options(
             joinedload(Site.downloads),
             joinedload(Site.images),
             joinedload(Site.footer_menu)
         ).offset(offset).limit(per_page).all()
-        
+
         return sites, total
 
     def get_active(self, page: int = 1, per_page: int = 20) -> Tuple[List[Site], int]:
         """Obtener solo los sitios activos con paginación"""
         query = Site.filter(Site.is_active == True)
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         sites = query.options(
             joinedload(Site.downloads),
             joinedload(Site.images),
             joinedload(Site.footer_menu)
         ).offset(offset).limit(per_page).all()
-        
+
         return sites, total
 
     def get_in_maintenance(self, page: int = 1, per_page: int = 20) -> Tuple[List[Site], int]:
         """Obtener sitios en modo mantenimiento con paginación"""
-        query = Site.filter(Site.maintenance_mode == True)
+        query = Site.filter(Site.maintenance_mode is True)
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         sites = query.options(
             joinedload(Site.downloads),
             joinedload(Site.images),
             joinedload(Site.footer_menu)
         ).offset(offset).limit(per_page).all()
-        
+
         return sites, total
 
     def create(self, obj_in: SiteCreate) -> Site:
@@ -76,7 +77,7 @@ class CRUDSite:
         # Verificar que el slug no exista
         if self.slug_exists(obj_in.slug):
             raise ValueError(f"Site with slug '{obj_in.slug}' already exists")
-            
+
         db_obj = Site(
             name=obj_in.name,
             slug=obj_in.slug,
@@ -98,14 +99,14 @@ class CRUDSite:
     def update(self, db_obj: Site, obj_in: SiteUpdate) -> Site:
         """Actualizar un sitio existente"""
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
         # Verificar que el slug no exista si se está actualizando
         if "slug" in update_data and self.slug_exists(update_data["slug"], exclude_id=db_obj.id):
             raise ValueError(f"Site with slug '{update_data['slug']}' already exists")
-        
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
-        
+
         return db_obj.save()
 
     def delete(self, db_obj: Site) -> None:
@@ -149,7 +150,7 @@ class CRUDSite:
 
     def count_in_maintenance(self) -> int:
         """Contar sitios en mantenimiento"""
-        return Site.filter(Site.maintenance_mode == True).count()
+        return Site.filter(Site.maintenance_mode is True).count()
 
     def search(self, query: str, page: int = 1, per_page: int = 20) -> Tuple[List[Site], int]:
         """Buscar sitios por texto en name, slug o footer_info"""
@@ -159,46 +160,56 @@ class CRUDSite:
             (Site.footer_info.like(f"%{query}%"))
         )
         total = search_query.count()
-        
+
         offset = (page - 1) * per_page
         sites = search_query.options(
             joinedload(Site.downloads),
             joinedload(Site.images),
             joinedload(Site.footer_menu)
         ).offset(offset).limit(per_page).all()
-        
+
         return sites, total
 
-    def get_with_downloads_count(self, page: int = 1, per_page: int = 20) -> Tuple[List[tuple], int]:
+    def get_with_downloads_count(
+            self,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[tuple], int]:
         """Obtener sitios con el conteo de descargas"""
         from sqlalchemy import func
-        
+
         query = Site.query().outerjoin(Download).group_by(Site.id).add_columns(
             func.count(Download.id).label('downloads_count')
         )
-        
+
         total = Site.query().count()
-        
+
         offset = (page - 1) * per_page
         result = query.offset(offset).limit(per_page).all()
-        
+
         return result, total
 
-    def get_sites_by_level_range(self, min_level: str, max_level: str, page: int = 1, per_page: int = 20) -> Tuple[List[Site], int]:
+    def get_sites_by_level_range(
+            self,
+            min_level: str,
+            max_level: str,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[Site], int]:
         """Obtener sitios por rango de niveles"""
         query = Site.filter(
             Site.initial_level >= min_level,
             Site.max_level <= max_level
         )
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         sites = query.options(
             joinedload(Site.downloads),
             joinedload(Site.images),
             joinedload(Site.footer_menu)
         ).offset(offset).limit(per_page).all()
-        
+
         return sites, total
 
 

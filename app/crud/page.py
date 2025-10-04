@@ -1,3 +1,4 @@
+"""CRUD para manejar las operaciones de páginas en la base de datos."""
 from typing import Optional, List, Tuple
 # Local Imports
 from app.models.application import Pages
@@ -7,9 +8,9 @@ from app.schemas.page import PageCreate, PageUpdate
 class CRUDPage:
     """CRUD para manejar las operaciones de páginas"""
 
-    def get(self, id: int) -> Optional[Pages]:
+    def get(self, page_id: int) -> Optional[Pages]:
         """Obtener una página por ID"""
-        return Pages.filter(Pages.id == id).first()
+        return Pages.filter(Pages.id == page_id).first()
 
     def get_by_slug(self, slug: str) -> Optional[Pages]:
         """Obtener una página por slug"""
@@ -23,20 +24,20 @@ class CRUDPage:
         """Obtener páginas paginadas con información de total"""
         query = Pages.query().order_by(Pages.id.desc())
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         pages = query.offset(offset).limit(per_page).all()
-        
+
         return pages, total
 
     def get_published(self, page: int = 1, per_page: int = 20) -> Tuple[List[Pages], int]:
         """Obtener solo las páginas publicadas con paginación"""
-        query = Pages.filter(Pages.published == True).order_by(Pages.id.desc())
+        query = Pages.filter(Pages.published is True).order_by(Pages.id.desc())
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         pages = query.offset(offset).limit(per_page).all()
-        
+
         return pages, total
 
     def create(self, obj_in: PageCreate) -> Pages:
@@ -53,10 +54,10 @@ class CRUDPage:
     def update(self, db_obj: Pages, obj_in: PageUpdate) -> Pages:
         """Actualizar una página existente"""
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
-        
+
         return db_obj.save()
 
     def delete(self, db_obj: Pages) -> None:
@@ -79,7 +80,7 @@ class CRUDPage:
 
     def count_published(self) -> int:
         """Contar páginas publicadas"""
-        return Pages.filter(Pages.published == True).count()
+        return Pages.filter(Pages.published is True).count()
 
     def search(self, query: str, page: int = 1, per_page: int = 20) -> Tuple[List[Pages], int]:
         """Buscar páginas por texto en título, slug o contenido"""
@@ -89,33 +90,44 @@ class CRUDPage:
             (Pages.content.like(f"%{query}%"))
         ).order_by(Pages.id.desc())
         total = search_query.count()
-        
+
         offset = (page - 1) * per_page
         pages = search_query.offset(offset).limit(per_page).all()
-        
+
         return pages, total
 
-    def get_by_site(self, site_id: str, page: int = 1, per_page: int = 20) -> Tuple[List[Pages], int]:
+    def get_by_site(
+            self,
+            site_id: str,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[Pages], int]:
         """Obtener páginas por sitio con paginación"""
         query = Pages.filter(Pages.site_id == site_id).order_by(Pages.id.desc())
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         pages = query.offset(offset).limit(per_page).all()
-        
+
         return pages, total
 
-    def get_by_site_and_published(self, site_id: str, published: bool, page: int = 1, per_page: int = 20) -> Tuple[List[Pages], int]:
+    def get_by_site_and_published(
+            self,
+            site_id: str,
+            published: bool,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[Pages], int]:
         """Obtener páginas por sitio y estado de publicación con paginación"""
         query = Pages.filter(
             Pages.site_id == site_id,
             Pages.published == published
         ).order_by(Pages.id.desc())
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         pages = query.offset(offset).limit(per_page).all()
-        
+
         return pages, total
 
     def slug_exists(self, slug: str, exclude_id: Optional[int] = None) -> bool:
@@ -127,6 +139,8 @@ class CRUDPage:
 
 
 def get_page() -> CRUDPage:
-    """Obtener una instancia del CRUDPage"""
-    """Esta función es útil para inyección de dependencias en FastAPI"""
+    """
+        Obtener una instancia del CRUDPage
+        Esta función es útil para inyección de dependencias en FastAPI
+    """
     return CRUDPage()

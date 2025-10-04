@@ -1,3 +1,4 @@
+"""Modelo de la tabla 'account'."""
 from enum import Enum as PyEnum
 from sqlalchemy import Column, Integer, String, Index, Enum
 from sqlalchemy.orm import validates
@@ -6,13 +7,15 @@ from app.database import BaseSaveAccountModel
 
 # Status
 class StatusType(PyEnum):
+    """Enum para los estados de la cuenta."""
     OK = "OK" # Estado activo
     BANNED = "BANNED"
 
 
 class Account(BaseSaveAccountModel):
+    """Modelo de la tabla 'account'."""
     __tablename__ = 'account'
-    
+
     __table_args__ = (
         Index('login', 'login', unique=True),
         Index('social_id', 'social_id'),
@@ -38,6 +41,6 @@ class Account(BaseSaveAccountModel):
     status = Column(Enum(StatusType), nullable=False,
         comment='Estado de la cuenta (OK, BANNED)'
     )
-    
+
     def __repr__(self):
         return f"<Account(id={self.id}, login='{self.login}')>"

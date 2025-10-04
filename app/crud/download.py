@@ -1,3 +1,4 @@
+"""CRUD para manejar las operaciones de descargas"""
 from typing import Optional, List, Tuple
 from math import ceil
 from sqlalchemy.orm import joinedload
@@ -9,9 +10,11 @@ from app.schemas.download import DownloadCreate, DownloadUpdate
 class CRUDDownload:
     """CRUD para manejar las operaciones de descargas"""
 
-    def get(self, id: int) -> Optional[Download]:
+    def get(self, download_id: int) -> Optional[Download]:
         """Obtener una descarga por ID"""
-        return Download.filter(Download.id == id).options(joinedload(Download.site)).first()
+        return Download.filter(
+            Download.id == download_id
+        ).options(joinedload(Download.site)).first()
 
     def get_multi(self, skip: int = 0, limit: int = 100) -> List[Download]:
         """Obtener múltiples descargas con paginación básica"""
@@ -21,40 +24,50 @@ class CRUDDownload:
         """Obtener descargas paginadas con información de total"""
         query = Download.query()
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
-        
+
         return downloads, total
 
-    def get_by_category(self, category: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+    def get_by_category(
+            self,
+            category: str,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[Download], int]:
         """Obtener descargas por categoría con paginación"""
         query = Download.filter(Download.category == category)
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
-        
+
         return downloads, total
 
     def get_published(self, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
         """Obtener solo las descargas publicadas con paginación"""
-        query = Download.filter(Download.published == True)
+        query = Download.filter(Download.published is True)
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
-        
+
         return downloads, total
 
-    def get_by_provider(self, provider: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+    def get_by_provider(
+            self,
+            provider: str,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[Download], int]:
         """Obtener descargas por proveedor con paginación"""
         query = Download.filter(Download.provider == provider)
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
-        
+
         return downloads, total
 
     def create(self, obj_in: DownloadCreate) -> Download:
@@ -63,7 +76,7 @@ class CRUDDownload:
         site = Site.filter(Site.id == obj_in.site_id).first()
         if not site:
             raise ValueError(f"Site with id {obj_in.site_id} not found")
-            
+
         db_obj = Download(
             provider=obj_in.provider,
             size=obj_in.size,
@@ -77,16 +90,16 @@ class CRUDDownload:
     def update(self, db_obj: Download, obj_in: DownloadUpdate) -> Download:
         """Actualizar una descarga existente"""
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
         # Verificar que el sitio existe si se está actualizando
         if "site_id" in update_data:
             site = Site.filter(Site.id == update_data["site_id"]).first()
             if not site:
                 raise ValueError(f"Site with id {update_data['site_id']} not found")
-        
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
-        
+
         return db_obj.save()
 
     def delete(self, db_obj: Download) -> None:
@@ -103,27 +116,38 @@ class CRUDDownload:
         db_obj.published = False
         return db_obj.save()
 
-    def get_by_site(self, site_id: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+    def get_by_site(
+            self,
+            site_id: str,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[Download], int]:
         """Obtener descargas por sitio con paginación"""
         query = Download.filter(Download.site_id == site_id)
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
-        
+
         return downloads, total
-        
-    def get_by_site_and_category(self, site_id: str, category: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
+
+    def get_by_site_and_category(
+            self,
+            site_id: str,
+            category: str,
+            page: int = 1,
+            per_page: int = 20
+        ) -> Tuple[List[Download], int]:
         """Obtener descargas por sitio y categoría con paginación"""
         query = Download.filter(
             Download.site_id == site_id,
             Download.category == category
         )
         total = query.count()
-        
+
         offset = (page - 1) * per_page
         downloads = query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
-        
+
         return downloads, total
 
     def count_total(self) -> int:
@@ -136,7 +160,7 @@ class CRUDDownload:
 
     def count_published(self) -> int:
         """Contar descargas publicadas"""
-        return Download.filter(Download.published == True).count()
+        return Download.filter(Download.published is True).count()
 
     def search(self, query: str, page: int = 1, per_page: int = 20) -> Tuple[List[Download], int]:
         """Buscar descargas por texto en provider, category o link"""
@@ -146,10 +170,12 @@ class CRUDDownload:
             (Download.link.like(f"%{query}%"))
         )
         total = search_query.count()
-        
+
         offset = (page - 1) * per_page
-        downloads = search_query.options(joinedload(Download.site)).offset(offset).limit(per_page).all()
-        
+        downloads = search_query.options(
+            joinedload(Download.site)
+        ).offset(offset).limit(per_page).all()
+
         return downloads, total
 
     def get_categories(self) -> List[str]:
@@ -164,6 +190,8 @@ class CRUDDownload:
 
 
 def get_download() -> CRUDDownload:
-    """Obtener una instancia del CRUDDownload"""
-    """Esta función es útil para inyección de dependencias en FastAPI"""
+    """
+        Obtener una instancia del CRUDDownload
+        Esta función es útil para inyección de dependencias en FastAPI
+    """
     return CRUDDownload()
