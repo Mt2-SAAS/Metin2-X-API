@@ -1,12 +1,18 @@
 """Database setup and session management using SQLAlchemy."""
 from typing import Generator
+import logging
 from sqlalchemy import create_engine, Column, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session, Query
 from sqlalchemy.sql import func
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 # Local Imports
 from .config import settings
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # Crear el engine de la base de datos
@@ -81,144 +87,313 @@ class TimestampMixin:
 
 
 def get_base_save_model():
-    """Obtener la sesión de base de datos para modelos que necesitan guardar datos"""
+    """Obtener clases base mejoradas con manejo de errores y sesiones por operación"""
     base = declarative_base()
     base_account = declarative_base()
     base_player = declarative_base()
     base_common = declarative_base()
 
-    session = SessionApp()
-    session_account = SessionLocalAccount()
-    session_player = SessionLocalPlayer()
-    session_common = SessionLocalCommon()
-
     class BaseModel(base, TimestampMixin):
-        """Clase base para modelos que necesitan guardar datos en la base de datos"""
+        """Clase base mejorada para modelos con manejo de errores y sesiones por operación"""
 
         __abstract__ = True
 
         def save(self):
-            """Guardar el modelo en la base de datos"""
-            session.add(self)
-            session.commit()
-            session.refresh(self)
-            return self
+            """Guardar el modelo en la base de datos con manejo de errores"""
+            session = SessionApp()
+            try:
+                session.add(self)
+                session.commit()
+                session.refresh(self)
+                logger.info(f"Modelo {self.__class__.__name__} guardado exitosamente")
+                return self
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al guardar {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al guardar {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al guardar {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al guardar {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         def delete(self):
-            """Eliminar el modelo de la base de datos"""
-            session.delete(self)
-            session.commit()
+            """Eliminar el modelo de la base de datos con manejo de errores"""
+            session = SessionApp()
+            try:
+                session.delete(self)
+                session.commit()
+                logger.info(f"Modelo {self.__class__.__name__} eliminado exitosamente")
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al eliminar {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al eliminar {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al eliminar {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al eliminar {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         @classmethod
         def filter(cls, *args, **kwargs):
-            """Filtrar modelos por expresiones o atributos"""
-            return session.query(cls).filter(*args, **kwargs)
+            """Filtrar modelos por expresiones o atributos usando sesión por operación"""
+            session = SessionApp()
+            try:
+                return session.query(cls).filter(*args, **kwargs)
+            finally:
+                session.close()
 
         @classmethod
         def query(cls) -> Query:
-            """Realizar una consulta a la base de datos
-            Y devuelve una instancia de query para el modelo
-            """
+            """Realizar una consulta a la base de datos usando sesión por operación"""
+            session = SessionApp()
             return session.query(cls)
 
     class BaseAccountModel(base_account):
-        """Clase base para modelos que necesitan guardar datos en la base de datos"""
+        """Clase base mejorada para modelos de account con manejo de errores"""
 
         __abstract__ = True
 
         def save(self):
-            """Guardar el modelo en la base de datos"""
-            session_account.add(self)
-            session_account.commit()
-            session_account.refresh(self)
-            return self
+            """Guardar el modelo en la base de datos account con manejo de errores"""
+            session = SessionLocalAccount()
+            try:
+                session.add(self)
+                session.commit()
+                session.refresh(self)
+                logger.info(f"Modelo Account {self.__class__.__name__} guardado exitosamente")
+                return self
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al guardar Account {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al guardar Account {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al guardar Account {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al guardar Account {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         def delete(self):
-            """Eliminar el modelo de la base de datos"""
-            session_account.delete(self)
-            session_account.commit()
+            """Eliminar el modelo de la base de datos account con manejo de errores"""
+            session = SessionLocalAccount()
+            try:
+                session.delete(self)
+                session.commit()
+                logger.info(f"Modelo Account {self.__class__.__name__} eliminado exitosamente")
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al eliminar Account {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al eliminar Account {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al eliminar Account {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al eliminar Account {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         @classmethod
         def filter(cls, *args, **kwargs):
-            """Filtrar modelos por expresiones o atributos"""
-            return session_account.query(cls).filter(*args, **kwargs)
+            """Filtrar modelos por expresiones o atributos usando sesión por operación"""
+            session = SessionLocalAccount()
+            try:
+                return session.query(cls).filter(*args, **kwargs)
+            finally:
+                session.close()
 
         @classmethod
         def query(cls, refresh=False) -> Query:
-            """Realizar una consulta a la base de datos
-            Y devuelve una instancia de query para el modelo
-            Este metodo permite refrescar la sesión si es necesario
-            Esto es porque algunos datos son creados por fuera de la sesión y no estan en el cache
-            """
+            """Realizar una consulta a la base de datos con opción de refresh"""
+            session = SessionLocalAccount()
             if refresh:
-                session_player.expire_all()
-            return session_account.query(cls)
+                session.expire_all()
+            return session.query(cls)
 
     class BasePlayerModel(base_player):
-        """Clase base para modelos que necesitan guardar datos en la base de datos"""
+        """Clase base mejorada para modelos de player con manejo de errores"""
 
         __abstract__ = True
 
         def save(self):
-            """Guardar el modelo en la base de datos"""
-            session_player.add(self)
-            session_player.commit()
-            session_player.refresh(self)
-            return self
+            """Guardar el modelo en la base de datos player con manejo de errores"""
+            session = SessionLocalPlayer()
+            try:
+                session.add(self)
+                session.commit()
+                session.refresh(self)
+                logger.info(f"Modelo Player {self.__class__.__name__} guardado exitosamente")
+                return self
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al guardar Player {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al guardar Player {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al guardar Player {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al guardar Player {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         def delete(self):
-            """Eliminar el modelo de la base de datos"""
-            session_player.delete(self)
-            session_player.commit()
+            """Eliminar el modelo de la base de datos player con manejo de errores"""
+            session = SessionLocalPlayer()
+            try:
+                session.delete(self)
+                session.commit()
+                logger.info(f"Modelo Player {self.__class__.__name__} eliminado exitosamente")
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al eliminar Player {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al eliminar Player {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al eliminar Player {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al eliminar Player {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         @classmethod
         def filter(cls, *args, **kwargs):
-            """Filtrar modelos por expresiones o atributos"""
-            return session_player.query(cls).filter(*args, **kwargs)
+            """Filtrar modelos por expresiones o atributos usando sesión por operación"""
+            session = SessionLocalPlayer()
+            try:
+                return session.query(cls).filter(*args, **kwargs)
+            finally:
+                session.close()
 
         @classmethod
         def query(cls, refresh=False) -> Query:
-            """Realizar una consulta a la base de datos
-            Y devuelve una instancia de query para el modelo
-            Este metodo permite refrescar la sesión si es necesario
-            Esto es porque algunos datos son creados por fuera de la sesión y no estan en el cache
-            """
+            """Realizar una consulta a la base de datos con opción de refresh"""
+            session = SessionLocalPlayer()
             if refresh:
-                session_player.expire_all()
-            return session_player.query(cls)
+                session.expire_all()
+            return session.query(cls)
 
     class BaseCommonModel(base_common):
-        """Clase base para modelos que necesitan guardar datos en la base de datos"""
+        """Clase base mejorada para modelos de common con manejo de errores"""
 
         __abstract__ = True
 
         def save(self):
-            """Guardar el modelo en la base de datos"""
-            session_common.add(self)
-            session_common.commit()
-            session_common.refresh(self)
-            return self
+            """Guardar el modelo en la base de datos common con manejo de errores"""
+            session = SessionLocalCommon()
+            try:
+                session.add(self)
+                session.commit()
+                session.refresh(self)
+                logger.info(f"Modelo Common {self.__class__.__name__} guardado exitosamente")
+                return self
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al guardar Common {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al guardar Common {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al guardar Common {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al guardar Common {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         def delete(self):
-            """Eliminar el modelo de la base de datos"""
-            session_common.delete(self)
-            session_common.commit()
+            """Eliminar el modelo de la base de datos common con manejo de errores"""
+            session = SessionLocalCommon()
+            try:
+                session.delete(self)
+                session.commit()
+                logger.info(f"Modelo Common {self.__class__.__name__} eliminado exitosamente")
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Error de integridad al eliminar Common {self.__class__.__name__}: {str(e)}")
+                raise ValueError(f"Error de integridad: {str(e)}")
+            except OperationalError as e:
+                session.rollback()
+                logger.error(f"Error operacional al eliminar Common {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de conexión: {str(e)}")
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f"Error de base de datos al eliminar Common {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error de base de datos: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error inesperado al eliminar Common {self.__class__.__name__}: {str(e)}")
+                raise RuntimeError(f"Error inesperado: {str(e)}")
+            finally:
+                session.close()
 
         @classmethod
         def filter(cls, *args, **kwargs):
-            """Filtrar modelos por expresiones o atributos"""
-            return session_common.query(cls).filter(*args, **kwargs)
+            """Filtrar modelos por expresiones o atributos usando sesión por operación"""
+            session = SessionLocalCommon()
+            try:
+                return session.query(cls).filter(*args, **kwargs)
+            finally:
+                session.close()
 
         @classmethod
         def query(cls, refresh=False) -> Query:
-            """Realizar una consulta a la base de datos
-            Y devuelve una instancia de query para el modelo
-            Este metodo permite refrescar la sesión si es necesario
-            Esto es porque algunos datos son creados por fuera de la sesión y no estan en el cache
-            """
+            """Realizar una consulta a la base de datos con opción de refresh"""
+            session = SessionLocalCommon()
             if refresh:
-                session_player.expire_all()
-            return session_common.query(cls)
+                session.expire_all()
+            return session.query(cls)
 
     return (
         BaseModel,
