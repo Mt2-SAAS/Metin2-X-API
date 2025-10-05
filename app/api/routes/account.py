@@ -1,3 +1,4 @@
+"""Rutas para la gestión de cuentas de usuario (registro, login, actualización, etc.)"""
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -7,15 +8,15 @@ from app.config import settings
 from app.models.player import Player
 from app.schemas.player import PlayerUserResponse
 from app.schemas.account import (
-    AccountCreate, 
-    AccountUpdate, 
-    AccountBase, 
+    AccountCreate,
+    AccountUpdate,
+    AccountBase,
     AccountPasswordUpdate
 )
 from app.api.deps import (
-    crud_account_dependency,
-    current_account_dependency,
-    require_gm_level_implementor
+    CrudAccountDependency,
+    CurrentAccountDependency,
+    RequireGMLevelImplementor
 )
 
 
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/account", tags=["account"])
 @router.post("/register", response_model=AccountBase)
 async def create_account(
     account_in: AccountCreate,
-    account: crud_account_dependency,
+    account: CrudAccountDependency,
 ):
     """Registrar nueva cuenta"""
     # Verificar si el login ya existe
@@ -46,7 +47,7 @@ async def create_account(
 
 @router.post("/token")
 async def login_for_access_token(
-    account: crud_account_dependency,
+    account: CrudAccountDependency,
     form_data: OAuth2PasswordRequestForm = Depends(),
 ):
     """Login y obtener token de acceso (usar login como username)"""
@@ -67,14 +68,14 @@ async def login_for_access_token(
 
 
 @router.get("/me", response_model=AccountBase)
-async def read_account_me(current_account: current_account_dependency):
+async def read_account_me(current_account: CurrentAccountDependency):
     """Obtener información de la cuenta actual"""
     return current_account
 
 
 @router.get("/me/is_admin", response_model=AccountBase)
 async def is_gm_account(
-    admin_user: require_gm_level_implementor,
+    admin_user: RequireGMLevelImplementor,
 ):
     """Verificar si la cuenta actual es administrador"""
     return admin_user
@@ -83,8 +84,8 @@ async def is_gm_account(
 @router.put("/me", response_model=AccountBase)
 async def update_account_me(
     account_in: AccountUpdate,
-    account: crud_account_dependency,
-    current_account: current_account_dependency,
+    account: CrudAccountDependency,
+    current_account: CurrentAccountDependency,
 ):
     """Actualizar información de la cuenta actual"""
     # Verificar que el social_id sea un número de 7 dígitos
@@ -99,9 +100,9 @@ async def update_account_me(
 
 @router.put("/me/password", response_model=AccountBase)
 async def update_password_account_me(
-    account: crud_account_dependency,
+    account: CrudAccountDependency,
     account_in: AccountPasswordUpdate,
-    current_account: current_account_dependency,
+    current_account: CurrentAccountDependency,
 ):
     """Metodo solo para actualizar la contraseña de la cuenta actual"""
     acc = account.authenticate(login=current_account.login, password=account_in.old_password)
@@ -117,7 +118,7 @@ async def update_password_account_me(
 
 @router.get("/me/players", response_model=PlayerUserResponse)
 async def get_player(
-    current_account: current_account_dependency,
+    current_account: CurrentAccountDependency,
 ):
     """Obtener los personajes asociados a la cuenta actual"""
     players = Player.query(refresh=True).filter(Player.account_id==current_account.id).all()

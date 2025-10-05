@@ -1,9 +1,10 @@
+"""Rutas para la gestión de datos del juego (jugadores, gremios, descargas, páginas, sitios, imágenes)"""
 from fastapi import APIRouter, Query, HTTPException, Depends, UploadFile, File
 from math import ceil
 from datetime import datetime, timedelta
 # Local Imports
 from app.api.deps import (
-    require_gm_level_implementor
+    RequireGMLevelImplementor
 )
 from app.models.player import Player, Guild
 from app.models.account import Account
@@ -174,7 +175,7 @@ async def list_downloads(
 
 @router.get("/downloads/{download_id}", response_model=DownloadResponse)
 async def get_download_by_id(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -187,7 +188,7 @@ async def get_download_by_id(
 
 @router.post("/downloads", response_model=DownloadResponse)
 async def create_download(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     download: DownloadCreate,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -209,7 +210,7 @@ async def create_download(
 
 @router.put("/downloads/{download_id}", response_model=DownloadResponse)
 async def update_download(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     download_id: int,
     download_update: DownloadUpdate,
     crud: CRUDDownload = Depends(get_download)
@@ -235,7 +236,7 @@ async def update_download(
 
 @router.patch("/downloads/{download_id}/publish", response_model=DownloadResponse)
 async def publish_download(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -256,7 +257,7 @@ async def publish_download(
 
 @router.patch("/downloads/{download_id}/unpublish", response_model=DownloadResponse)
 async def unpublish_download(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -277,7 +278,7 @@ async def unpublish_download(
 
 @router.delete("/downloads/{download_id}")
 async def delete_download(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     download_id: int,
     crud: CRUDDownload = Depends(get_download)
 ):
@@ -337,7 +338,7 @@ async def get_downloads_by_site(
 # Page endpoints
 @router.get("/pages", response_model=PaginatedPageResponse)
 async def list_pages(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     published_only: bool = Query(False, description="Solo mostrar páginas publicadas"),
@@ -372,7 +373,7 @@ async def list_pages(
         raise HTTPException(
             status_code=500,
             detail=f"Error al obtener páginas: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/pages/slug/{slug}", response_model=PageResponse)
@@ -406,7 +407,7 @@ async def get_page_by_id(
 
 @router.post("/pages", response_model=PageResponse)
 async def create_page(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page: PageCreate,
     crud: CRUDPage = Depends(get_page)
 ):
@@ -432,7 +433,7 @@ async def create_page(
 
 @router.put("/pages/{page_id}", response_model=PageResponse)
 async def update_page(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page_id: int,
     page_update: PageUpdate,
     crud: CRUDPage = Depends(get_page)
@@ -462,7 +463,7 @@ async def update_page(
 
 @router.patch("/pages/{page_id}/publish", response_model=PageResponse)
 async def publish_page(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page_id: int,
     crud: CRUDPage = Depends(get_page)
 ):
@@ -482,7 +483,7 @@ async def publish_page(
 
 @router.patch("/pages/{page_id}/unpublish", response_model=PageResponse)
 async def unpublish_page(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page_id: int,
     crud: CRUDPage = Depends(get_page)
 ):
@@ -502,7 +503,7 @@ async def unpublish_page(
 
 @router.delete("/pages/{page_id}")
 async def delete_page(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page_id: int,
     crud: CRUDPage = Depends(get_page)
 ):
@@ -563,7 +564,7 @@ async def get_pages_by_site(
 # Site endpoints
 @router.get("/sites", response_model=PaginatedSiteResponse)
 async def list_sites(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     active_only: bool = Query(False, description="Solo mostrar sitios activos"),
@@ -621,7 +622,7 @@ async def get_site_by_slug(
 
 @router.get("/sites/{site_id}", response_model=SiteResponseDetailed)
 async def get_site_by_id(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -634,7 +635,7 @@ async def get_site_by_id(
 
 @router.post("/sites", response_model=SiteResponse)
 async def create_site(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site: SiteCreate,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -656,7 +657,7 @@ async def create_site(
 
 @router.put("/sites/{site_id}", response_model=SiteResponse)
 async def update_site(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site_id: str,
     site_update: SiteUpdate,
     crud: CRUDSite = Depends(get_site)
@@ -682,7 +683,7 @@ async def update_site(
 
 @router.patch("/sites/{site_id}/activate", response_model=SiteResponse)
 async def activate_site(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -702,7 +703,7 @@ async def activate_site(
 
 @router.patch("/sites/{site_id}/deactivate", response_model=SiteResponse)
 async def deactivate_site(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -722,7 +723,7 @@ async def deactivate_site(
 
 @router.patch("/sites/{site_id}/maintenance/enable", response_model=SiteResponse)
 async def enable_maintenance_mode(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -742,7 +743,7 @@ async def enable_maintenance_mode(
 
 @router.patch("/sites/{site_id}/maintenance/disable", response_model=SiteResponse)
 async def disable_maintenance_mode(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -762,7 +763,7 @@ async def disable_maintenance_mode(
 
 @router.delete("/sites/{site_id}")
 async def delete_site(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     site_id: str,
     crud: CRUDSite = Depends(get_site)
 ):
@@ -838,7 +839,7 @@ async def get_site_stats(
 # Image endpoints
 @router.get("/images", response_model=PaginatedImageResponse)
 async def list_images(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     site_id: str = Query(None, description="Filtrar por sitio"),
@@ -885,7 +886,7 @@ async def list_images(
 
 @router.get("/images/{image_id}", response_model=ImageResponse)
 async def get_image_by_id(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     image_id: int,
     crud: CRUDImage = Depends(get_image)
 ):
@@ -898,7 +899,7 @@ async def get_image_by_id(
 
 @router.post("/images/upload", response_model=ImageResponse)
 async def upload_image(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     file: UploadFile = File(...),
     image_type: ImageType = Query(..., description="Tipo de imagen (logo/bg)"),
     site_id: str = Query(..., description="ID del sitio al que pertenece la imagen"),
@@ -939,7 +940,7 @@ async def upload_image(
 
 @router.put("/images/{image_id}", response_model=ImageResponse)
 async def update_image(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     image_id: int,
     image_update: ImageUpdate,
     crud: CRUDImage = Depends(get_image)
@@ -965,7 +966,7 @@ async def update_image(
 
 @router.post("/images/{image_id}/replace", response_model=ImageResponse)
 async def replace_image_file(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     image_id: int,
     file: UploadFile = File(...),
     crud: CRUDImage = Depends(get_image)
@@ -1014,7 +1015,7 @@ async def replace_image_file(
 
 @router.delete("/images/{image_id}")
 async def delete_image(
-    _: require_gm_level_implementor,
+    _: RequireGMLevelImplementor,
     image_id: int,
     crud: CRUDImage = Depends(get_image)
 ):

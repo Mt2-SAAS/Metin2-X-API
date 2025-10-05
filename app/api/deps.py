@@ -1,3 +1,4 @@
+"""Dependencias comunes para las rutas de la API."""
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from jose import jwt, JWTError
@@ -20,26 +21,34 @@ security = HTTPBearer()
 def get_current_account(
     token: str = Depends(security)
 ) -> Account:
+    """ 
+        Verifica el token JWT y devuelve la cuenta actual.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudieron validar las credenciales",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token.credentials,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
         login: str = payload.get("sub")  # Cambiamos email por login
         if login is None:
             raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
+    except JWTError as exc:
+        raise credentials_exception from exc
+
     db_account = account.get_by_login(login=login)  # Buscamos por login en lugar de email
     if db_account is None:
         raise credentials_exception
     return db_account
 
 def get_current_active_account(current_account: Account = Depends(get_current_account)) -> Account:
-    """ Verifica que la cuenta esté activa.
+    """ 
+        Verifica que la cuenta esté activa.
     """
     if current_account.status != StatusType.OK:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cuenta inactiva")
@@ -48,8 +57,10 @@ def get_current_active_account(current_account: Account = Depends(get_current_ac
 def require_admin_account(
     current_account: Account = Depends(get_current_account)
 ) -> Account:
-    """ Verifica que la cuenta tenga tiene personajes con nivel de acceso GM"""
-    """Deprecated: Use require_gm_level instead."""
+    """
+        Verifica que la cuenta tenga tiene personajes con nivel de acceso GM
+        Deprecated: Use require_gm_level instead.
+    """
     if not common.is_admin(current_account.login):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -59,6 +70,7 @@ def require_admin_account(
 
 
 def require_gm_level(required_level: AuthorityLevel):
+    """ Verifica que la cuenta tenga el nivel de autoridad requerido o superior."""
     def authority_checker(current_account: Account = Depends(get_current_account)):
         """ Verifica que la cuenta tenga el nivel de autoridad requerido o superior.
         """
@@ -73,18 +85,45 @@ def require_gm_level(required_level: AuthorityLevel):
     return authority_checker
 
 
-database_dependency = Annotated[Session, Depends(get_db)]
-database_account_dependency = Annotated[Session, Depends(get_acount_db)]
-database_player_dependency = Annotated[Session, Depends(get_player_db)]
-crud_account_dependency = Annotated[CRUDAccount, Depends(get_account)]
-current_account_dependency = Annotated[Account, Depends(get_current_active_account)]
-require_authority_level = Annotated[Account, Depends(require_admin_account)] # Deprecated, use require_gm_level instead
+DatabaseDependency = Annotated[Session, Depends(get_db)]
+DatabaseAccountDependency = Annotated[Session, Depends(get_acount_db)]
+DatabasePlayerDependency = Annotated[Session, Depends(get_player_db)]
+CrudAccountDependency = Annotated[CRUDAccount, Depends(get_account)]
+CurrentAccountDependency = Annotated[Account, Depends(get_current_active_account)]
 
+# Deprecated dependencies
+RequireAuthorityLevel = Annotated[
+    Account,
+    Depends(require_admin_account)
+] # Deprecated, use require_gm_level instead
 
 # Anotated permission level dependencies
 # Estos permisos son legacy y se hicieron asi porque en metin2 son asi.
-require_gm_level_implementor = Annotated[Account, Depends(require_gm_level(AuthorityLevel.IMPLEMENTOR))] 
-require_gm_level_high_wizard = Annotated[Account, Depends(require_gm_level(AuthorityLevel.HIGH_WIZARD))] 
-require_gm_level_god = Annotated[Account, Depends(require_gm_level(AuthorityLevel.GOD))] 
-require_gm_level_low_wizard = Annotated[Account, Depends(require_gm_level(AuthorityLevel.LOW_WIZARD))] 
-require_gm_level_player = Annotated[Account, Depends(require_gm_level(AuthorityLevel.PLAYER))] 
+RequireGMLevelImplementor = Annotated[
+    Account,
+    Depends(require_gm_level(AuthorityLevel.IMPLEMENTOR))
+]
+# Actualmente solo se esta usando este nivel de permisos, porque es el mas alto
+# Si en su server en particular usan mas niveles de permisos, pueden usar los demas
+# Un GM implementor normalmente es un administrador del servidor.
+
+# Permiso para usuarios que son GM con el nivel mas alto
+RequireGMLevelHighWizard = Annotated[
+    Account, 
+    Depends(require_gm_level(AuthorityLevel.HIGH_WIZARD))
+]
+# Permiso para usuarios que son GM con el nivel intermedio  
+RequireGMLevelGod = Annotated[
+    Account,
+    Depends(require_gm_level(AuthorityLevel.GOD))
+]
+# Permiso para usuarios que son GM con el nivel mas bajo
+RequireGMLevelLowWizard = Annotated[
+    Account,
+    Depends(require_gm_level(AuthorityLevel.LOW_WIZARD))
+]
+# Permiso para usuarios que no son GM, pero tienen cuenta registrada
+RequirePlayerLevel = Annotated[
+    Account,
+    Depends(require_gm_level(AuthorityLevel.PLAYER))
+]
